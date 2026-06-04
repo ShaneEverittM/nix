@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
-  home.username = "nixos";
-  home.homeDirectory = "/home/nixos";
+  home.username = "shane";
+  home.homeDirectory = "/home/shane";
   home.stateVersion = "25.11";
 
   programs.home-manager.enable = true;

@@ -27,7 +27,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.nixos = import ./home.nix;
+            home-manager.users.shane = import ./home.nix;
           }
           ./configuration.nix
         ];

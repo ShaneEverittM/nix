@@ -13,7 +13,11 @@
 
 {
   wsl.enable = true;
-  wsl.defaultUser = "nixos";
+  wsl.defaultUser = "shane";
+
+  # /mnt windows drives are owned by uid 1000 by default; point them at shane
+  # (uid 1001) so the primary user owns them.
+  wsl.wslConf.automount.options = "metadata,uid=1001,gid=100";
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
@@ -33,9 +37,25 @@
   # flake on every `nixos-rebuild` (which runs as root via sudo).
   environment.systemPackages = with pkgs; [ git ];
 
-  users.users.nixos.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
-  ];
+  # Primary user. The NixOS-WSL module already makes the default user a normal,
+  # wheel/sudo-capable account (uid defaults to 1000); we override the uid to
+  # 1001 because the fallback `nixos` account still holds 1000, and add the key.
+  users.users.shane = {
+    uid = 1001;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
+    ];
+  };
+
+  # Fallback account kept during the rename — remove once shane is confirmed.
+  users.users.nixos = {
+    isNormalUser = true;
+    uid = 1000;
+    extraGroups = [ "wheel" ];
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
+    ];
+  };
 
   # Provide a real dynamic linker at the FHS path so prebuilt/foreign
   # binaries (e.g. the Node-based Claude Code remote CLI) can run on NixOS.
