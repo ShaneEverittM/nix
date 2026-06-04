@@ -29,6 +29,17 @@
             home-manager.useUserPackages = true;
             home-manager.users.shane = import ./home.nix;
           }
+          {
+            # Pin `<nixpkgs>` and `<home-manager>` to this flake's inputs so
+            # channel-based tools (manix's option-doc search) can index both
+            # NixOS and home-manager options without legacy `nix-channel` setup.
+            # Both must be listed: setting nix.nixPath replaces the default
+            # (flake:nixpkgs) entry rather than appending to it.
+            nix.nixPath = [
+              "nixpkgs=${nixpkgs}"
+              "home-manager=${home-manager}"
+            ];
+          }
           ./configuration.nix
         ];
       };

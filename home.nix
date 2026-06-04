@@ -38,5 +38,6 @@
     fd
     nixd # Nix language server (used by VS Code nix-ide)
     nixfmt-rfc-style # official RFC-style formatter; provides `nixfmt`
+    manix # fast CLI search over NixOS/HM option + nixpkgs docs (`manix ssh`)
   ];
 }
