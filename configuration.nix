@@ -43,6 +43,7 @@
     "flakes"
   ];
 
+  us
   # git must be available system-wide: nix needs it to read this git-based
   # flake on every `nixos-rebuild` (which runs as root via sudo).
   environment.systemPackages = with pkgs; [ git ];
