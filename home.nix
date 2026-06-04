@@ -15,5 +15,10 @@
   };
 
   # starter user packages — adjust freely
-  home.packages = with pkgs; [ ripgrep fd ];
+  home.packages = with pkgs; [
+    ripgrep
+    fd
+    nixd              # Nix language server (used by VS Code nix-ide)
+    nixfmt-rfc-style  # official RFC-style formatter; provides `nixfmt`
+  ];
 }

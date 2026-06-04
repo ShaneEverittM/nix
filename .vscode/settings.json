@@ -1,0 +1,33 @@
+{
+  // Use nixd (installed via home.nix) as the language server, not the built-in.
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nixd",
+
+  "nix.serverSettings": {
+    "nixd": {
+      // Format with nixfmt (nixfmt-rfc-style), installed via home.nix.
+      "formatting": {
+        "command": ["nixfmt"]
+      },
+      // Completion/hover for nixpkgs lib + package attrs.
+      "nixpkgs": {
+        "expr": "import <nixpkgs> { }"
+      },
+      // Option completion/hover for THIS flake's NixOS + home-manager options.
+      "options": {
+        "nixos": {
+          "expr": "(builtins.getFlake \"/home/nixos/nixos-config\").nixosConfigurations.nixos.options"
+        },
+        "home-manager": {
+          "expr": "(builtins.getFlake \"/home/nixos/nixos-config\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
+        }
+      }
+    }
+  },
+
+  "[nix]": {
+    "editor.defaultFormatter": "jnoortheen.nix-ide",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  }
+}
