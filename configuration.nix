@@ -47,16 +47,6 @@
     ];
   };
 
-  # Fallback account kept during the rename — remove once shane is confirmed.
-  users.users.nixos = {
-    isNormalUser = true;
-    uid = 1000;
-    extraGroups = [ "wheel" ];
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
-    ];
-  };
-
   # Provide a real dynamic linker at the FHS path so prebuilt/foreign
   # binaries (e.g. the Node-based Claude Code remote CLI) can run on NixOS.
   programs.nix-ld.enable = true;
@@ -73,7 +63,7 @@
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
-      AllowUsers = [ "nixos" ];
+      AllowUsers = [ "shane" ];
       MaxAuthTries = 3;
       PerSourcePenalties = "crash:3600s authfail:3600s max:86400s";
     };
