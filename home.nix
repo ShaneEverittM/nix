@@ -27,9 +27,9 @@
   # ~/.gitconfig). Uncomment and fill in your details, then rebuild.
   programs.git = {
     enable = true;
-    userName = "Shane Murphy";
-    userEmail = "mail@shanemurphy.space";
-    extraConfig.init.defaultBranch = "main";
+    settings.user.name = "Shane Murphy";
+    settings.user.email = "mail@shanemurphy.space";
+    settings.init.defaultBranch = "main";
   };
 
   # starter user packages — adjust freely
@@ -39,5 +39,6 @@
     nixd # Nix language server (used by VS Code nix-ide)
     nixfmt-rfc-style # official RFC-style formatter; provides `nixfmt`
     manix # fast CLI search over NixOS/HM option + nixpkgs docs (`manix ssh`)
+    fastfetch
   ];
 }
