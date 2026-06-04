@@ -10,8 +10,8 @@
   # ~/.gitconfig). Uncomment and fill in your details, then rebuild.
   programs.git = {
     enable = true;
-    # userName = "Your Name";
-    # userEmail = "you@example.com";
+    userName = "Shane Murphy";
+    userEmail = "mail@shanemurphy.space";
   };
 
   # starter user packages — adjust freely
