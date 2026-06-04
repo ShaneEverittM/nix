@@ -19,6 +19,16 @@
   # (uid 1001) so the primary user owns them.
   wsl.wslConf.automount.options = "metadata,uid=1001,gid=100";
 
+  # Don't append the Windows PATH to the Linux PATH. Those dirs contain files
+  # with spaces in their names (e.g. "VmFirmware Third-Party Notices.txt"), and
+  # tools that enumerate commands via `COMMANDS=($(compgen -c))` word-split them
+  # into bogus tokens. Warp's command-highlight generator does exactly this, so
+  # the stray fragments misalign its arrays and it underlines real, installed
+  # commands as "not found". interop stays enabled — Windows exes are still
+  # runnable by full path; they're just no longer on PATH by bare name.
+  # NOTE: takes effect only after a `wsl --shutdown` (wsl.conf is read at boot).
+  wsl.wslConf.interop.appendWindowsPath = false;
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It's perfectly fine and recommended to leave
