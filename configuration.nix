@@ -9,7 +9,7 @@
 # module is supplied by the flake input `nixos-wsl.nixosModules.default`, so
 # the old `imports = [ <nixos-wsl/modules> ];` channel import has been removed.
 
-{ config, lib, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   wsl.enable = true;
@@ -24,7 +24,10 @@
   system.stateVersion = "25.11"; # Did you read the comment?
 
   # Enable flakes and the new nix CLI system-wide.
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   # git must be available system-wide: nix needs it to read this git-based
   # flake on every `nixos-rebuild` (which runs as root via sudo).

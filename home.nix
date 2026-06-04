@@ -18,7 +18,7 @@
   home.packages = with pkgs; [
     ripgrep
     fd
-    nixd              # Nix language server (used by VS Code nix-ide)
-    nixfmt-rfc-style  # official RFC-style formatter; provides `nixfmt`
+    nixd # Nix language server (used by VS Code nix-ide)
+    nixfmt-rfc-style # official RFC-style formatter; provides `nixfmt`
   ];
 }
