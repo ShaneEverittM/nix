@@ -29,6 +29,7 @@
     enable = true;
     userName = "Shane Murphy";
     userEmail = "mail@shanemurphy.space";
+    extraConfig.init.defaultBranch = "main";
   };
 
   # starter user packages — adjust freely
