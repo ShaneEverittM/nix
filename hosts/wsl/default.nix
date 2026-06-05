@@ -34,17 +34,11 @@ inputs.nixpkgs.lib.nixosSystem {
         # Windows PATH in WSL, see modules/nixos/wsl.nix.)
         publicHome.onepassword.npiperelay = "/mnt/c/Users/shane/AppData/Local/Microsoft/WinGet/Packages/albertony.npiperelay_Microsoft.Winget.Source_8wekyb3d8bbwe/npiperelay.exe";
 
-        # Commit signing via the relayed 1Password key. DISABLED until you supply
-        # your 1Password SSH *public* key below (safe to commit — it's public).
-        # With the agent relayed, git signs via ssh-keygen using the agent — no
-        # op-ssh-sign needed. git.nix turns on gpg.format=ssh + commit.gpgsign as
-        # soon as signingKey is non-null.
-        #   publicHome.git.signingKey = "ssh-ed25519 AAAA... (your 1Password key)";
-        #
-        # Alternative: drive signing through the Windows op-ssh-sign helper instead
-        # of the agent (note: Linux→Windows temp-path translation can be finicky):
-        #   publicHome.git.sshSigningProgram =
-        #     "/mnt/c/Users/shane/AppData/Local/1Password/app/8/op-ssh-sign.exe";
+        # Commit signing via the relayed 1Password key (same key as the sshd
+        # authorizedKeys above). git signs through ssh-keygen + the agent — no
+        # op-ssh-sign needed. git.nix enables gpg.format=ssh + commit.gpgsign and
+        # wires an allowed-signers file for local verification.
+        publicHome.git.signingKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3";
       };
     }
     ../../modules/nixos/common.nix

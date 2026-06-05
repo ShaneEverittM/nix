@@ -4,7 +4,12 @@
 # signing key (the work machine sets its own in the private nix-work repo).
 #
 # Requires git-lfs and diff-so-fancy on PATH — both are in lib/packages.nix.
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.publicHome.git;
@@ -91,11 +96,25 @@ in
           // lib.optionalAttrs (cfg.signingKey != null) { signingkey = cfg.signingKey; };
       }
       // lib.optionalAttrs (cfg.signingKey != null) {
-        gpg.format = "ssh";
         commit.gpgsign = true;
       }
-      // lib.optionalAttrs (cfg.sshSigningProgram != null) {
-        gpg.ssh.program = cfg.sshSigningProgram;
+      // lib.optionalAttrs (cfg.signingKey != null || cfg.sshSigningProgram != null) {
+        # Build the entire `gpg` block in ONE attrset literal so its dotted keys
+        # deep-merge. Splitting gpg.* across separate `//` blocks shallow-merges and
+        # silently drops siblings (e.g. allowedSignersFile clobbering gpg.format,
+        # which falls back to openpgp and breaks signing).
+        gpg.format = "ssh";
+        gpg.ssh =
+          lib.optionalAttrs (cfg.signingKey != null && cfg.userEmail != null) {
+            # Lets local `git log --show-signature` / `verify-commit` trust this
+            # identity's own key (signing itself works without it).
+            allowedSignersFile = toString (
+              pkgs.writeText "git-allowed-signers" "${cfg.userEmail} ${cfg.signingKey}\n"
+            );
+          }
+          // lib.optionalAttrs (cfg.sshSigningProgram != null) {
+            program = cfg.sshSigningProgram;
+          };
       };
     };
   };
