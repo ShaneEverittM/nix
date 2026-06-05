@@ -11,8 +11,13 @@
 
 let
   cfg = config.programs.warp;
-  configRoot = config.publicHome.configRoot;
-  link = path: config.lib.file.mkOutOfStoreSymlink "${configRoot}/${path}";
+  publicRoot = ../..;
+  sourceFile =
+    path:
+    if config.publicHome.dotfiles.mode == "outOfStore" then
+      config.lib.file.mkOutOfStoreSymlink "${toString config.publicHome.repoRoot}/${path}"
+    else
+      publicRoot + "/${path}";
 in
 {
   options.programs.warp.packageSource = lib.mkOption {
@@ -30,42 +35,42 @@ in
 
     home.file = {
       ".warp/settings.toml" = {
-        source = link "files/warp/warp.toml";
+        source = sourceFile "files/warp/warp.toml";
         force = true;
       };
 
       ".warp/keybindings.yaml" = {
-        source = link "files/warp/keybindings.yaml";
+        source = sourceFile "files/warp/keybindings.yaml";
         force = true;
       };
 
       ".warp-oss/settings.toml" = {
-        source = link "files/warp/warp.toml";
+        source = sourceFile "files/warp/warp.toml";
         force = true;
       };
 
       ".warp-oss/keybindings.yaml" = {
-        source = link "files/warp/keybindings.yaml";
+        source = sourceFile "files/warp/keybindings.yaml";
         force = true;
       };
 
       ".warp/themes/jetbrains-ide-dark.yaml" = {
-        source = link "files/warp/themes/jetbrains-ide-dark.yaml";
+        source = sourceFile "files/warp/themes/jetbrains-ide-dark.yaml";
         force = true;
       };
 
       ".warp/themes/jetbrains-ide-light.yaml" = {
-        source = link "files/warp/themes/jetbrains-ide-light.yaml";
+        source = sourceFile "files/warp/themes/jetbrains-ide-light.yaml";
         force = true;
       };
 
       ".warp-oss/themes/jetbrains-ide-dark.yaml" = {
-        source = link "files/warp/themes/jetbrains-ide-dark.yaml";
+        source = sourceFile "files/warp/themes/jetbrains-ide-dark.yaml";
         force = true;
       };
 
       ".warp-oss/themes/jetbrains-ide-light.yaml" = {
-        source = link "files/warp/themes/jetbrains-ide-light.yaml";
+        source = sourceFile "files/warp/themes/jetbrains-ide-light.yaml";
         force = true;
       };
     };

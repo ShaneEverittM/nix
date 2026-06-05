@@ -23,9 +23,9 @@ inputs.home-manager.lib.homeManagerConfiguration {
     ../../modules/home # core bundle (common + git + shell + rust + bun)
     ../../modules/home/darwin.nix # Mac GUI bundle (vscode + warp + jetbrains)
     {
-      # Personal git identity (already public). configRoot defaults to
-      # ~/.config/home-manager — where the hm.ts workflow expects the checkout, and
-      # what the vscode/warp out-of-store symlinks resolve against.
+      # Personal git identity (already public). repoRoot defaults to ~/.config/nix —
+      # where the hm.ts workflow expects the checkout, and what the vscode/warp
+      # out-of-store symlinks resolve against.
       publicHome.git.userName = "Shane Murphy";
       publicHome.git.userEmail = "mail@shanemurphy.space";
 

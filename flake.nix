@@ -64,24 +64,24 @@
       # homeModules.default + homeModules.darwin into a standalone home-manager
       # configuration.
       homeModules = {
-        default = ./modules/home; # core bundle (common + git + shell + rust + bun)
-        linux = ./modules/home/linux.nix; # WSL extras
-        darwin = ./modules/home/darwin.nix; # Mac GUI bundle (vscode + warp + jetbrains)
+        default = import ./modules/home; # core bundle (common + git + shell + rust + bun)
+        linux = import ./modules/home/linux.nix; # WSL extras
+        darwin = import ./modules/home/darwin.nix; # Mac GUI bundle (vscode + warp + jetbrains)
 
         # Individual modules, for finer-grained downstream composition.
-        common = ./modules/home/common.nix;
-        git = ./modules/home/git.nix;
-        shell = ./modules/home/shell.nix;
-        rust = ./modules/home/rust.nix;
-        bun = ./modules/home/bun.nix;
-        vscode = ./modules/home/vscode.nix;
-        warp = ./modules/home/warp.nix;
-        jetbrains = ./modules/home/jetbrains.nix;
+        common = import ./modules/home/common.nix;
+        git = import ./modules/home/git.nix;
+        shell = import ./modules/home/shell.nix;
+        rust = import ./modules/home/rust.nix;
+        bun = import ./modules/home/bun.nix;
+        vscode = import ./modules/home/vscode.nix;
+        warp = import ./modules/home/warp.nix;
+        jetbrains = import ./modules/home/jetbrains.nix;
       };
 
       nixosModules = {
-        default = ./modules/nixos/common.nix;
-        wsl = ./modules/nixos/wsl.nix;
+        default = import ./modules/nixos/common.nix;
+        wsl = import ./modules/nixos/wsl.nix;
       };
     };
 }

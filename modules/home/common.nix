@@ -4,7 +4,7 @@
 #
 # This module owns the `publicHome.*` option namespace: the shared modules carry
 # behavior, each host (and the downstream private work repo) supplies the values
-# (username, git identity, where the repo is checked out).
+# (username, git identity, repo paths, dotfile mode, and private overlays).
 #
 # NOTE: keep this module free of any `nix.*` settings. The work Mac runs Determinate
 # Nix (which owns Nix's own config) and consumes this module via standalone
@@ -34,15 +34,36 @@ in
       description = "Home directory. Defaults to the platform-standard path for username.";
     };
 
-    configRoot = lib.mkOption {
-      type = lib.types.str;
-      default = "${cfg.homeDirectory}/.config/home-manager";
+    repoRoot = lib.mkOption {
+      type = lib.types.oneOf [
+        lib.types.str
+        lib.types.path
+      ];
+      default = "${cfg.homeDirectory}/.config/nix";
       description = ''
-        Where this repo is checked out on the target machine. Used by the
-        out-of-store symlinks in vscode.nix/warp.nix (so the dotfiles stay live-
-        editable) and the `hm` shell alias. Macs run the hm.ts workflow from here;
-        WSL leaves the default since those modules are not imported there.
+        Where this public repo is checked out on the target machine. Public hosts
+        use it for live-editable dotfiles and the default hm helper.
       '';
+    };
+
+    dotfiles.mode = lib.mkOption {
+      type = lib.types.enum [
+        "store"
+        "outOfStore"
+      ];
+      default = "outOfStore";
+      description = "Whether public dotfiles are copied from the flake store or linked live from publicHome.repoRoot.";
+    };
+
+    hmScript = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.oneOf [
+          lib.types.str
+          lib.types.path
+        ]
+      );
+      default = "${toString cfg.repoRoot}/scripts/hm.ts";
+      description = "Optional script path used for the zsh hm alias.";
     };
   };
 

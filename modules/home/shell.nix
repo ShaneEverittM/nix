@@ -1,7 +1,11 @@
 # zsh + ergonomics, shared by every host. Aliases lean on tools from
 # lib/packages.nix (eza/bat) and zoxide. On WSL, zsh is also set as the login shell
 # in modules/nixos/wsl.nix; macOS already defaults to zsh.
-{ config, ... }:
+{
+  config,
+  lib,
+  ...
+}:
 
 {
   programs.zsh = {
@@ -12,10 +16,12 @@
       cd = "z";
       ls = "eza";
       cat = "bat";
-      # `hm` drives the home-manager workflow on the Macs (see scripts/hm.ts). On WSL
-      # the workflow is nixos-rebuild, so this alias is unused there.
-      hm = "${config.publicHome.configRoot}/scripts/hm.ts";
       rr = "rustrover";
+    }
+    // lib.optionalAttrs (config.publicHome.hmScript != null) {
+      # `hm` drives the home-manager workflow on the Macs. On WSL the workflow is
+      # nixos-rebuild, so this alias is unused there.
+      hm = toString config.publicHome.hmScript;
     };
 
     history = {

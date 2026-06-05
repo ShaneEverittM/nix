@@ -5,20 +5,25 @@
 { config, pkgs, ... }:
 
 let
-  configRoot = config.publicHome.configRoot;
-  link = path: config.lib.file.mkOutOfStoreSymlink "${configRoot}/${path}";
+  publicRoot = ../..;
+  sourceFile =
+    path:
+    if config.publicHome.dotfiles.mode == "outOfStore" then
+      config.lib.file.mkOutOfStoreSymlink "${toString config.publicHome.repoRoot}/${path}"
+    else
+      publicRoot + "/${path}";
   userConfigDir =
     if pkgs.stdenv.isDarwin then "Library/Application Support/Code/User" else ".config/Code/User";
 in
 {
   home.file = {
     "${userConfigDir}/settings.json" = {
-      source = link "files/vscode/settings.json";
+      source = sourceFile "files/vscode/settings.json";
       force = true;
     };
 
     "${userConfigDir}/keybindings.json" = {
-      source = link "files/vscode/keybindings.json";
+      source = sourceFile "files/vscode/keybindings.json";
       force = true;
     };
   };

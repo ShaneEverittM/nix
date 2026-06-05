@@ -2,18 +2,36 @@
 # config.toml here is the sanitized public version (cross linkers + git-fetch-with-
 # cli); the work machine's private Cargo registry/credential provider is overlaid in
 # the private nix-work repo.
-{ pkgs, ... }:
-
 {
-  home.packages = with pkgs; [
-    rustup
-  ];
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
-  home.sessionPath = [
-    "$HOME/.cargo/bin"
-  ];
+let
+  cfg = config.publicHome.rust;
+  publicCargoConfig = builtins.readFile ../../files/cargo/config.toml;
+  extraCargoConfig = lib.optionalString (cfg.extraCargoConfig != "") "\n\n${cfg.extraCargoConfig}";
+in
+{
+  options.publicHome.rust.extraCargoConfig = lib.mkOption {
+    type = lib.types.lines;
+    default = "";
+    description = "Private Cargo config appended after the public cross-linker settings.";
+  };
 
-  home.file = {
-    ".cargo/config.toml".source = ../../files/cargo/config.toml;
+  config = {
+    home.packages = with pkgs; [
+      rustup
+    ];
+
+    home.sessionPath = [
+      "$HOME/.cargo/bin"
+    ];
+
+    home.file = {
+      ".cargo/config.toml".text = "${publicCargoConfig}${extraCargoConfig}";
+    };
   };
 }

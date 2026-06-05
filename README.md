@@ -17,8 +17,8 @@ flake.nix              Inputs + outputs (nixosConfigurations, homeConfigurations
 lib/
   packages.nix         The shared CLI package set: `pkgs -> [ derivations ]`. Consumed
                        by every host's home.packages and by packages.default.
-files/                 Dotfiles symlinked into place (live-editable, see configRoot):
-                       cargo, vscode, warp themes/settings, ideavimrc.
+files/                 Public dotfiles. Hosts choose store-backed copies or live
+                       out-of-store symlinks via publicHome.dotfiles.mode.
 scripts/hm.ts          Bun helper: build/switch/add/update + Brewfile apply. Mac workflow.
 Brewfile               macOS casks/formulae base (Mac-only).
 modules/
@@ -49,8 +49,10 @@ not option existence (`wsl.enable` can't be referenced in a Darwin eval at all).
 
 The shared modules are **option-driven**: behavior lives in the module, per-machine values
 come from the `publicHome.*` options a host sets — `username` (derives `homeDirectory`),
-`git.{userName,userEmail,signingKey,sshSigningProgram}`, and `configRoot` (where the repo
-is checked out, used by the out-of-store dotfile symlinks). This is what lets the public
+`git.{userName,userEmail,signingKey,sshSigningProgram}`, `repoRoot`,
+`dotfiles.mode`, `hmScript`, and `rust.extraCargoConfig`. Public hosts can keep
+live-editable out-of-store dotfile links from their checkout; downstream private
+consumers can use store-backed public dotfiles and supply their own helper script. This is what lets the public
 modules carry no identity/secrets: each host — and the private work repo — supplies its own.
 
 The interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
@@ -105,13 +107,16 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
   `personal.homeModules.default` + `personal.homeModules.darwin`, then sets its own
   `publicHome.git.{userName,userEmail,signingKey,sshSigningProgram}` and adds the
   work-only bits the public seed deliberately omitted: work session vars / CLI wrappers,
-  a private Cargo registry overlay on `~/.cargo/config.toml`, and any work-only packages;
+  a private Cargo registry through `publicHome.rust.extraCargoConfig`, and any
+  work-only packages;
 - runs on **Determinate Nix**, so it sets `nix.enable = false` to let Determinate own
   Nix's config (which is why `modules/home/common.nix` carries **no** `nix.*` settings —
   keep it that way);
 - pulls secrets at runtime via the **1Password CLI** (`op run` / `op inject`) — nothing
   encrypted/committed, no sops/agenix;
-- stays private only for work-internal config, not for secrets.
+- stays private only for work-internal config, not for secrets;
+- can set `publicHome.dotfiles.mode = "store"` and `publicHome.hmScript` to its own
+  private helper so public dotfiles come from the flake input while work workflow stays local.
 
 ## Conventions
 
