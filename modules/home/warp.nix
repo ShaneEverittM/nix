@@ -1,4 +1,4 @@
-# Warp terminal settings, keybindings, and themes as out-of-store symlinks (mirrored
+# Warp terminal settings, keybindings, and themes (mirrored
 # to both the stable `.warp` and OSS `.warp-oss` profile dirs). Mac-only (bundled via
 # darwin.nix). The optional packageSource installs a Warp build through Home Manager;
 # leave it "none" unless a `warpPackages` arg is supplied by the consumer.
@@ -18,6 +18,15 @@ let
       config.lib.file.mkOutOfStoreSymlink "${toString config.publicHome.repoRoot}/${path}"
     else
       publicRoot + "/${path}";
+  settingsTemplate = builtins.readFile (publicRoot + "/files/warp/warp.toml");
+  settingsFor =
+    profileDir:
+    builtins.replaceStrings
+      [ "@warpThemeDir@" ]
+      [
+        "${config.publicHome.homeDirectory}/${profileDir}/themes"
+      ]
+      settingsTemplate;
 in
 {
   options.programs.warp.packageSource = lib.mkOption {
@@ -35,7 +44,7 @@ in
 
     home.file = {
       ".warp/settings.toml" = {
-        source = sourceFile "files/warp/warp.toml";
+        text = settingsFor ".warp";
         force = true;
       };
 
@@ -45,7 +54,7 @@ in
       };
 
       ".warp-oss/settings.toml" = {
-        source = sourceFile "files/warp/warp.toml";
+        text = settingsFor ".warp-oss";
         force = true;
       };
 

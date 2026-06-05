@@ -24,20 +24,20 @@ view_mode = "compact"
 
 [appearance.themes]
 theme = {
-  custom = { name = "JetBrains IDE Dark", path = "~/.warp/themes/jetbrains-ide-dark.yaml" },
+  custom = { name = "JetBrains IDE Dark", path = "@warpThemeDir@/jetbrains-ide-dark.yaml" },
 }
 system_theme = true
 selected_system_themes = {
   dark = {
     custom = {
       name = "JetBrains IDE Dark",
-      path = "~/.warp-oss/themes/jetbrains-ide-dark.yaml",
+      path = "@warpThemeDir@/jetbrains-ide-dark.yaml",
     },
   },
   light = {
     custom = {
       name = "JetBrains IDE Light",
-      path = "~/.warp-oss/themes/jetbrains-ide-light.yaml",
+      path = "@warpThemeDir@/jetbrains-ide-light.yaml",
     },
   },
 }
