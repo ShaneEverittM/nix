@@ -28,6 +28,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     {
       # Personal git identity (already public). repoRoot defaults to ~/.config/nix,
       # which is also the default NH_HOME_FLAKE and out-of-store dotfile root.
+      publicHome.nh.homeConfiguration = "shane@macbook";
       publicHome.git.userName = "Shane Murphy";
       publicHome.git.userEmail = "mail@shanemurphy.space";
 
