@@ -50,14 +50,13 @@ not option existence (`wsl.enable` can't be referenced in a Darwin eval at all).
 The shared modules are **option-driven**: behavior lives in the module, per-machine values
 come from the `publicHome.*` options a host sets — `username` (derives `homeDirectory`),
 `git.{userName,userEmail,signingKey,sshSigningProgram}`, `repoRoot`,
-`dotfiles.mode`, `nh.homeFlake`, `nh.homeConfiguration`, and
-`rust.extraCargoConfig`. Public hosts can keep live-editable out-of-store dotfile
-links from their checkout; downstream private consumers can use store-backed public
-dotfiles and point `nh` at their own consuming flake/configuration. Mergeable TOML
-config is generated from Nix attrsets, so downstream consumers can overlay Cargo
-and Warp settings without text templates or appended TOML strings. This is what
-lets the public modules carry no identity/secrets: each host — and the private work
-repo — supplies its own.
+`dotfiles.mode`, `nh.homeFlake`, and `rust.extraCargoConfig`. Public hosts can keep
+live-editable out-of-store dotfile links from their checkout; downstream private
+consumers can use store-backed public dotfiles and point `nh` at their own consuming
+flake. Mergeable TOML config is generated from Nix attrsets, so downstream consumers
+can overlay Cargo and Warp settings without text templates or appended TOML strings.
+This is what lets the public modules carry no identity/secrets: each host — and the
+private work repo — supplies its own.
 
 The interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
 shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to the
@@ -124,10 +123,11 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
 - pulls secrets at runtime via the **1Password CLI** (`op run` / `op inject`) — nothing
   encrypted/committed, no sops/agenix;
 - stays private only for work-internal config, not for secrets;
-- can set `publicHome.dotfiles.mode = "store"`, `publicHome.nh.homeFlake`, and
-  `publicHome.nh.homeConfiguration` to its own private repo/configuration so public
-  dotfiles come from the flake input while `nh home` acts on the downstream
-  configuration.
+- can set `publicHome.dotfiles.mode = "store"` and `publicHome.nh.homeFlake` to its own
+  private repo so public dotfiles come from the flake input while `nh home` acts on the
+  downstream configuration. If the downstream configuration name is not
+  auto-detectable from `<username>@<hostname>` or `<username>`, expose a matching
+  `homeConfigurations` alias in the downstream flake.
 
 ## Conventions
 

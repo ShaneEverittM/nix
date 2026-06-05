@@ -20,12 +20,6 @@
 
 let
   cfg = config.publicHome;
-  nhHomeFlake = toString cfg.nh.homeFlake;
-  nhHomeInstallable =
-    if cfg.nh.homeConfiguration == null then
-      nhHomeFlake
-    else
-      "${nhHomeFlake}#${cfg.nh.homeConfiguration}";
 in
 {
   options.publicHome = {
@@ -76,15 +70,6 @@ in
         this to their own consuming flake root.
       '';
     };
-
-    nh.homeConfiguration = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = ''
-        Optional homeConfigurations attribute name appended to NH_HOME_FLAKE.
-        This lets nh home commands default to a non-hostname-derived config name.
-      '';
-    };
   };
 
   config = {
@@ -110,7 +95,7 @@ in
       enable = true;
     }
     // lib.optionalAttrs (cfg.nh.homeFlake != null) {
-      homeFlake = nhHomeInstallable;
+      homeFlake = toString cfg.nh.homeFlake;
     };
   };
 }

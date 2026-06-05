@@ -39,12 +39,23 @@
         system = "x86_64-linux";
       };
 
-      # Personal MacBook Air — `nh home switch -c shane@macbook`.
+      # Personal MacBook Air — `nh home switch`.
       # Evaluable anywhere, buildable only on a Darwin builder.
-      homeConfigurations."shane@macbook" = import ./hosts/macbook/default.nix {
-        inherit inputs;
-        system = "aarch64-darwin";
-      };
+      homeConfigurations =
+        let
+          macbook = import ./hosts/macbook/default.nix {
+            inherit inputs;
+            system = "aarch64-darwin";
+          };
+        in
+        {
+          "shane@macbook" = macbook;
+
+          # nh home auto-detects <username>@<hostname>, then <username>. Keep
+          # this alias so the public Mac can use the short nh home commands even
+          # when its hostname is not literally "macbook".
+          shane = macbook;
+        };
 
       # Convenience env of the shared package set for ad-hoc `nix profile install
       # .#default` on any machine. The real per-host consumption is via
