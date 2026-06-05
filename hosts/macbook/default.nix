@@ -5,6 +5,7 @@
 
 let
   pkgs = import inputs.nixpkgs { inherit system; };
+  pkgsUnstable = import inputs.nixpkgs-unstable { inherit system; };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
@@ -13,6 +14,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
   # Warp fork (inputs.warp); stable is the nixpkgs binary. Only the source selected
   # by programs.warp.packageSource below is ever realized (lazy), and only on the Mac.
   extraSpecialArgs = {
+    inherit pkgsUnstable;
+
     warpPackages = {
       local-oss = inputs.warp.packages.${system}.warp-terminal-experimental;
       stable = pkgs.warp-terminal;

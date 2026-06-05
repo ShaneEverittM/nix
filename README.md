@@ -57,8 +57,10 @@ the private work repo — supplies its own.
 
 The interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
 shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to the
-**nixos-25.11** release across all inputs, with a single `nixpkgs` (`follows` threaded
-through every input).
+**nixos-25.11** release across the baseline inputs, with a single stable `nixpkgs`
+(`follows` threaded through the main inputs). A separate `nixpkgs-unstable` input is
+used only for the small cross-host package lane in `lib/unstable-packages.nix`, for
+tools that need to move faster than the release branch.
 
 ## Applying changes
 
@@ -76,6 +78,7 @@ nh home switch -c shane@macbook
 
 Edit the layer that fits the change:
 - Shared CLI packages → `lib/packages.nix`
+- Fast-moving shared CLI packages → `lib/unstable-packages.nix`
 - Shared behavior (git, shell, rust, bun) → the matching `modules/home/*.nix`
 - Per-machine values (identity, checkout path) → `publicHome.*` in the host file
 - Linux/WSL-only → `modules/home/linux.nix`, `modules/nixos/*`
@@ -94,15 +97,16 @@ nix flake update          # updates all inputs in flake.lock
 # then nixos-rebuild switch / nh home switch as above
 ```
 
-To update a single input: `nix flake update nixpkgs`. Commit `flake.lock` alongside any
-input change so builds stay reproducible.
+To update a single input: `nix flake update nixpkgs` or
+`nix flake update nixpkgs-unstable`. Commit `flake.lock` alongside any input change so
+builds stay reproducible.
 
 ## Downstream: the private work repo
 
 The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
 
 - adds this repo as a flake input (`inputs.personal.inputs.nixpkgs.follows = "nixpkgs"`
-  to keep a single nixpkgs);
+  and `inputs.personal.inputs.nixpkgs-unstable.follows = "nixpkgs-unstable"`);
 - defines a standalone `homeConfigurations."shane@work-mac"` importing
   `personal.homeModules.default` + `personal.homeModules.darwin`, then sets its own
   `publicHome.git.{userName,userEmail,signingKey,sshSigningProgram}` and adds the

@@ -14,6 +14,7 @@
   config,
   lib,
   pkgs,
+  pkgsUnstable ? pkgs,
   ...
 }:
 
@@ -85,8 +86,10 @@ in
       "${cfg.homeDirectory}/.local/bin"
     ];
 
-    # The cross-host shared package set (see lib/packages.nix).
-    home.packages = import ../../lib/packages.nix pkgs;
+    # The cross-host shared package set: mostly stable, with a small explicit
+    # unstable lane for fast-moving tools (see lib/unstable-packages.nix).
+    home.packages =
+      import ../../lib/packages.nix pkgs ++ import ../../lib/unstable-packages.nix pkgsUnstable;
 
     programs.nh = {
       enable = true;

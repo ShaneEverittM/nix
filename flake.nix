@@ -4,6 +4,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
 
+    # Small package lane for cross-host tools that need to move faster than nixos-25.11.
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
     nixos-wsl.url = "github:nix-community/NixOS-WSL/release-25.11";
     nixos-wsl.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -50,11 +53,12 @@
         system:
         let
           pkgs = import nixpkgs { inherit system; };
+          pkgsUnstable = import inputs.nixpkgs-unstable { inherit system; };
         in
         {
           default = pkgs.buildEnv {
             name = "shane-packages";
-            paths = import ./lib/packages.nix pkgs;
+            paths = import ./lib/packages.nix pkgs ++ import ./lib/unstable-packages.nix pkgsUnstable;
           };
         }
       );

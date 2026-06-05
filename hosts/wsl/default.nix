@@ -3,6 +3,9 @@
 # modules, and shane's home-manager config (common + linux).
 { inputs, system }:
 
+let
+  pkgsUnstable = import inputs.nixpkgs-unstable { inherit system; };
+in
 inputs.nixpkgs.lib.nixosSystem {
   inherit system;
 
@@ -14,6 +17,7 @@ inputs.nixpkgs.lib.nixosSystem {
     inputs.nixos-wsl.nixosModules.default
     inputs.home-manager.nixosModules.home-manager
     {
+      home-manager.extraSpecialArgs = { inherit pkgsUnstable; };
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
       home-manager.users.shane = {
