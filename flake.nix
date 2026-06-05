@@ -1,5 +1,5 @@
 {
-  description = "NixOS-WSL system + home-manager for nixos@nixos";
+  description = "Platform-agnostic Nix config: NixOS-WSL system + standalone home-manager for Linux/macOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -12,36 +12,59 @@
   };
 
   outputs =
+    inputs@{ self, nixpkgs, ... }:
+    let
+      # Systems the convenience `packages.default` buildEnv is offered for.
+      systems = [
+        "x86_64-linux"
+        "aarch64-darwin"
+        "x86_64-darwin"
+      ];
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+    in
     {
-      nixpkgs,
-      nixos-wsl,
-      home-manager,
-      ...
-    }:
-    {
-      nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      # WSL host — `nixos-rebuild switch --flake .#nixos`.
+      nixosConfigurations.nixos = import ./hosts/wsl/default.nix {
+        inherit inputs;
         system = "x86_64-linux";
-        modules = [
-          nixos-wsl.nixosModules.default
-          home-manager.nixosModules.home-manager
-          {
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.shane = import ./home.nix;
-          }
-          {
-            # Pin `<nixpkgs>` and `<home-manager>` to this flake's inputs so
-            # channel-based tools (manix's option-doc search) can index both
-            # NixOS and home-manager options without legacy `nix-channel` setup.
-            # Both must be listed: setting nix.nixPath replaces the default
-            # (flake:nixpkgs) entry rather than appending to it.
-            nix.nixPath = [
-              "nixpkgs=${nixpkgs}"
-              "home-manager=${home-manager}"
-            ];
-          }
-          ./configuration.nix
-        ];
+      };
+
+      # Personal MacBook Air — `home-manager switch --flake .#shane@macbook`.
+      # Evaluable anywhere, buildable only on a Darwin builder.
+      homeConfigurations."shane@macbook" = import ./hosts/macbook/default.nix {
+        inherit inputs;
+        system = "aarch64-darwin";
+      };
+
+      # Convenience env of the shared package set for ad-hoc `nix profile install
+      # .#default` on any machine. The real per-host consumption is via
+      # home.packages (see lib/packages.nix).
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          default = pkgs.buildEnv {
+            name = "shane-packages";
+            paths = import ./lib/packages.nix pkgs;
+          };
+        }
+      );
+
+      # Reusable modules, re-exported so a downstream (e.g. the private work-Mac
+      # repo) can consume them as a flake input. The work Mac imports
+      # homeModules.default + homeModules.darwin into a standalone home-manager
+      # configuration.
+      homeModules = {
+        default = ./modules/home/common.nix;
+        linux = ./modules/home/linux.nix;
+        darwin = ./modules/home/darwin.nix;
+      };
+
+      nixosModules = {
+        default = ./modules/nixos/common.nix;
+        wsl = ./modules/nixos/wsl.nix;
       };
     };
 }

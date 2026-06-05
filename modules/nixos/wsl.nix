@@ -1,14 +1,6 @@
-# Edit this configuration file to define what should be installed on
-# your system. Help is available in the configuration.nix(5) man page, on
-# https://search.nixos.org/options and in the NixOS manual (`nixos-help`).
-
-# NixOS-WSL specific options are documented on the NixOS-WSL repository:
-# https://github.com/nix-community/NixOS-WSL
-
-# NOTE: This config is now built as a flake (see ./flake.nix). The NixOS-WSL
-# module is supplied by the flake input `nixos-wsl.nixosModules.default`, so
-# the old `imports = [ <nixos-wsl/modules> ];` channel import has been removed.
-
+# WSL host config: everything specific to running NixOS under WSL on this machine.
+# The NixOS-WSL module itself is supplied by the flake input
+# `nixos-wsl.nixosModules.default` (wired in hosts/wsl/default.nix).
 { pkgs, ... }:
 
 {
@@ -28,25 +20,6 @@
   # runnable by full path; they're just no longer on PATH by bare name.
   # NOTE: takes effect only after a `wsl --shutdown` (wsl.conf is read at boot).
   wsl.wslConf.interop.appendWindowsPath = false;
-
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It's perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.11"; # Did you read the comment?
-
-  # Enable flakes and the new nix CLI system-wide.
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
-
-
-  # git must be available system-wide: nix needs it to read this git-based
-  # flake on every `nixos-rebuild` (which runs as root via sudo).
-  environment.systemPackages = with pkgs; [ git ];
 
   # Primary user. The NixOS-WSL module already makes the default user a normal,
   # wheel/sudo-capable account (uid defaults to 1000); we override the uid to
