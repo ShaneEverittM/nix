@@ -127,3 +127,24 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
   a full WSL restart: run `wsl --shutdown` from Windows, then reopen the distro.
 - The primary user is `shane` (uid 1001); the NixOS-WSL fallback `nixos` account holds
   uid 1000.
+
+## 1Password SSH agent (WSL)
+
+`modules/home/ssh-agent.nix` bridges the Windows 1Password SSH agent (a named pipe) to a
+Unix socket in WSL, so `ssh`/`git` here authenticate with keys that never leave 1Password
+— nothing on disk. Enabled in the WSL host via `publicHome.onepassword.sshAgentRelay`. The
+Nix side (socat, `SSH_AUTH_SOCK`, the lazy relay started from zsh) is automatic; these
+**Windows-side** steps are manual (not Nix-managed):
+
+1. **1Password for Windows → Settings → Developer:** enable *Use the SSH agent* (and
+   *Integrate with 1Password CLI* if you want `op`/signing).
+2. **Install `npiperelay.exe`** on Windows, e.g. `scoop install npiperelay`. If it lands
+   somewhere other than `~/scoop/shims/npiperelay.exe`, set
+   `publicHome.onepassword.npiperelay` to the WSL-visible path (`/mnt/c/...`).
+3. Open a fresh WSL shell; `ssh-add -l` should list your 1Password keys. (`communication
+   with agent failed` means npiperelay isn't found or the agent toggle is off.)
+
+**Commit signing** (optional): once the agent is live, set `publicHome.git.signingKey` to
+your 1Password SSH *public* key in `hosts/wsl/default.nix` (safe to commit — it's public).
+`git.nix` then enables `gpg.format = ssh` + `commit.gpgsign`, and git signs via the relayed
+agent (no `op-ssh-sign` needed). See the commented block in `hosts/wsl/default.nix`.
