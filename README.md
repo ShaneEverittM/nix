@@ -18,7 +18,8 @@ lib/
   packages.nix         The shared CLI package set: `pkgs -> [ derivations ]`. Consumed
                        by every host's home.packages and by packages.default.
 files/                 Public dotfiles. Hosts choose store-backed copies or live
-                       out-of-store symlinks via publicHome.dotfiles.mode.
+                       out-of-store symlinks via publicHome.dotfiles.mode. Mergeable
+                       Cargo/Warp TOML is generated from Nix modules instead.
 Brewfile               macOS casks/formulae base (Mac-only).
 modules/
   home/                home-manager modules (the universal sharing layer):
@@ -52,8 +53,10 @@ come from the `publicHome.*` options a host sets — `username` (derives `homeDi
 `dotfiles.mode`, `nh.homeFlake`, and `rust.extraCargoConfig`. Public hosts can keep
 live-editable out-of-store dotfile links from their checkout; downstream private
 consumers can use store-backed public dotfiles and point `nh` at their own consuming
-flake. This is what lets the public modules carry no identity/secrets: each host — and
-the private work repo — supplies its own.
+flake. Mergeable TOML config is generated from Nix attrsets, so downstream consumers
+can overlay Cargo and Warp settings without text templates or appended TOML strings.
+This is what lets the public modules carry no identity/secrets: each host — and the
+private work repo — supplies its own.
 
 The interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
 shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to the
@@ -83,6 +86,7 @@ Edit the layer that fits the change:
 - Per-machine values (identity, checkout path) → `publicHome.*` in the host file
 - Linux/WSL-only → `modules/home/linux.nix`, `modules/nixos/*`
 - macOS-only (GUI/terminal) → `modules/home/darwin.nix` (+ vscode/warp/jetbrains)
+- Mergeable Cargo/Warp TOML → generated inside the owning Nix module
 
 The flake is read from the git tree, so **new files must be `git add`-ed** before a
 rebuild/switch will see them.
@@ -111,7 +115,7 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
   `personal.homeModules.default` + `personal.homeModules.darwin`, then sets its own
   `publicHome.git.{userName,userEmail,signingKey,sshSigningProgram}` and adds the
   work-only bits the public seed deliberately omitted: work session vars / CLI wrappers,
-  a private Cargo registry through `publicHome.rust.extraCargoConfig`, and any
+  a private Cargo registry through `publicHome.rust.extraCargoConfig` attrs, and any
   work-only packages;
 - runs on **Determinate Nix**, so it sets `nix.enable = false` to let Determinate own
   Nix's config (which is why `modules/home/common.nix` carries **no** `nix.*` settings —
