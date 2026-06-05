@@ -1,11 +1,16 @@
-# Darwin-only home-manager bits, shared by both Macs (personal MBA and work Mac).
+# Mac-only home-manager bundle, shared by both Macs (personal MBA and work Mac).
 # Imported alongside ./common.nix by the standalone home-manager configurations.
 # Both Macs run home-manager standalone (no nix-darwin), so this is the only
-# Mac-specific layer.
+# Mac-specific layer. It pulls in the GUI/terminal config (VS Code, Warp, JetBrains)
+# whose out-of-store symlinks resolve against publicHome.configRoot.
+# (homeDirectory is derived in common.nix from publicHome.username.)
 { ... }:
 {
-  home.homeDirectory = "/Users/shane";
+  imports = [
+    ./vscode.nix
+    ./warp.nix
+    ./jetbrains.nix
+  ];
 
-  # Mac-only packages/config go here (e.g. tools that only make sense on macOS).
-  # Nothing yet — fills in on the Mac itself.
+  # Mac-only packages/config beyond the GUI modules go here as they come up.
 }

@@ -21,11 +21,18 @@
   # NOTE: takes effect only after a `wsl --shutdown` (wsl.conf is read at boot).
   wsl.wslConf.interop.appendWindowsPath = false;
 
+  # zsh is the shared interactive shell (see modules/home/shell.nix). Enable it
+  # system-wide and make it shane's login shell — the NixOS-WSL default is bash,
+  # and macOS already defaults to zsh, so this is the only place the login shell
+  # needs setting declaratively.
+  programs.zsh.enable = true;
+
   # Primary user. The NixOS-WSL module already makes the default user a normal,
   # wheel/sudo-capable account (uid defaults to 1000); we override the uid to
   # 1001 because the fallback `nixos` account still holds 1000, and add the key.
   users.users.shane = {
     uid = 1001;
+    shell = pkgs.zsh;
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
     ];

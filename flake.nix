@@ -57,9 +57,19 @@
       # homeModules.default + homeModules.darwin into a standalone home-manager
       # configuration.
       homeModules = {
-        default = ./modules/home/common.nix;
-        linux = ./modules/home/linux.nix;
-        darwin = ./modules/home/darwin.nix;
+        default = ./modules/home; # core bundle (common + git + shell + rust + bun)
+        linux = ./modules/home/linux.nix; # WSL extras
+        darwin = ./modules/home/darwin.nix; # Mac GUI bundle (vscode + warp + jetbrains)
+
+        # Individual modules, for finer-grained downstream composition.
+        common = ./modules/home/common.nix;
+        git = ./modules/home/git.nix;
+        shell = ./modules/home/shell.nix;
+        rust = ./modules/home/rust.nix;
+        bun = ./modules/home/bun.nix;
+        vscode = ./modules/home/vscode.nix;
+        warp = ./modules/home/warp.nix;
+        jetbrains = ./modules/home/jetbrains.nix;
       };
 
       nixosModules = {

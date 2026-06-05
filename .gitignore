@@ -1,2 +1,7 @@
 result
 result-*
+
+# Scratch space for transcribing the work-Mac config — work-specific/private,
+# must never be committed to this public repo. Sort its contents into the
+# private nix-work repo, then delete. Gitignored => also invisible to the flake.
+migration/

@@ -1,0 +1,68 @@
+" Use a much more convenient leader
+let mapleader="\<Space>"
+
+" Map easier keys for jumping to start and end of line
+map H ^
+map L $
+
+" Quickly insert an empty new line without entering insert mode
+nnoremap <Leader>O moO<Esc>`o
+nnoremap <Leader>o moo<Esc>`o
+
+" Actions
+:map <leader>f <Action>(ReformatCode)
+:map <leader>q <Action>(CloseEditor)
+:map <leader>r <Action>(Run)
+:map <leader>b <Action>(Rust.Build)
+:map <leader>i <Action>(Switcher)
+:map <leader>p <Action>(Cargo.RunCargoCommand)
+
+" Various tabs of the search everywhere menu
+:map <leader>e <Action>(SearchEverywhere)
+:map <leader>c <Action>(GotoClass)
+:map <leader>n <Action>(GotoFile)
+:map <leader>s <Action>(GotoSymbol)
+:map <leader>a <Action>(GotoAction)
+:map <leader>z <Action>(FileStructurePopup)
+
+" Tool windows
+:map <leader><CR> <Action>(RunAnything)
+
+" Hover pop-ups
+:map ge <Action>(ShowErrorDescription)
+:map gh <Action>(QuickJavaDoc)
+:map g. <Action>(Refactorings.QuickListPopupAction)
+
+" Wrap text to column width, can be used on the current line, or in visual mode
+:map = <Action>(com.andrewbrookins.idea.wrap.WrapAction)
+
+" Movement
+:map gd <Action>(GotoDeclaration)
+:map gs <Action>(GotoSuperMethod)
+:map gi <Action>(GotoImplementation)
+
+" History navigation
+:map <leader><leader> <Action>(Back)
+:map <C-l> <Action>(Forward)
+:map <C-h> <Action>(Back)
+
+" Use IDE's find
+:map / <Action>(Find)
+
+" Smart line joining
+set ideajoin
+
+" Emulate vim-surround
+set surround
+
+" Emulate easymotion
+set easymotion
+
+" IDE specific settings
+if &ide =~? 'intellij idea'
+    if &ide =~? 'community'
+    elseif &ide =~? 'ultimate'
+    endif
+elseif &ide =~? 'pycharm'
+
+endif

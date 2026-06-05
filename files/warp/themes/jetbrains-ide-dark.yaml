@@ -1,0 +1,25 @@
+name: JetBrains IDE Dark
+accent: '#3574F0'
+cursor: '#CED0D6'
+background: '#1E1F22'
+foreground: '#BCBEC4'
+details: darker
+terminal_colors:
+  normal:
+    black: '#2B2D30'
+    red: '#DB5C5C'
+    green: '#6AAB73'
+    yellow: '#B3AE60'
+    blue: '#56A8F5'
+    magenta: '#C77DBB'
+    cyan: '#2AACB8'
+    white: '#BCBEC4'
+  bright:
+    black: '#6F737A'
+    red: '#F75464'
+    green: '#73BD79'
+    yellow: '#D6AE58'
+    blue: '#70AEFF'
+    magenta: '#B589EC'
+    cyan: '#60C0B5'
+    white: '#DFE1E5'

@@ -15,19 +15,30 @@ work-only config; see [Downstream: the private work repo](#downstream-the-privat
 flake.nix              Inputs + outputs (nixosConfigurations, homeConfigurations,
                        packages, homeModules, nixosModules).
 lib/
-  packages.nix         The shared package set: `pkgs -> [ derivations ]`. Consumed by
-                       every host's home.packages and by packages.default.
+  packages.nix         The shared CLI package set: `pkgs -> [ derivations ]`. Consumed
+                       by every host's home.packages and by packages.default.
+files/                 Dotfiles symlinked into place (live-editable, see configRoot):
+                       cargo, vscode, warp themes/settings, ideavimrc.
+scripts/hm.ts          Bun helper: build/switch/add/update + Brewfile apply. Mac workflow.
+Brewfile               macOS casks/formulae base (Mac-only).
 modules/
   home/                home-manager modules (the universal sharing layer):
-    common.nix           shared on every host — git, bash, packages, stateVersion.
-    linux.nix            Linux-only — /home/shane, WSL VS Code PATH dir.
-    darwin.nix           macOS-only — /Users/shane, mac-only bits (both Macs).
+    default.nix          core bundle: imports common + git + shell + rust + bun.
+    common.nix           publicHome.* options, packages, stateVersion, news.silent.
+    git.nix              option-driven git (aliases, diff-so-fancy, LFS); identity
+                         supplied per-host via publicHome.git.*.
+    shell.nix            zsh + zoxide, eza/bat aliases, uv/mise activation.
+    rust.nix             rustup + cargo (sanitized cross-compile config).
+    bun.nix              bun runtime + global @types/bun.
+    linux.nix            Linux-only — WSL VS Code PATH dir.
+    darwin.nix           Mac-only bundle — imports vscode + warp + jetbrains.
+    vscode.nix warp.nix jetbrains.nix   GUI/terminal dotfiles (out-of-store symlinks).
   nixos/               NixOS system modules (WSL host only):
     common.nix           flakes, system git, nixPath pin, stateVersion.
-    wsl.nix              wsl.*, openssh, users.users.shane, nix-ld.
+    wsl.nix              wsl.*, openssh, users.users.shane, nix-ld, zsh login shell.
 hosts/
-  wsl/default.nix      The `nixosConfigurations.nixos` system (nixos/* + home/{common,linux}).
-  macbook/default.nix  Standalone homeConfigurations."shane@macbook" (home/{common,darwin}).
+  wsl/default.nix      The `nixosConfigurations.nixos` system (nixos/* + home default+linux).
+  macbook/default.nix  Standalone homeConfigurations."shane@macbook" (home default+darwin).
 ```
 
 Why this shape: home-manager is the one layer every host shares, so the `modules/home/*`
@@ -36,8 +47,16 @@ are the real reuse atom; only WSL has a system (NixOS) layer. Neither Mac uses n
 splits happen by **which modules a host imports**, not by `mkIf` — `mkIf` guards values,
 not option existence (`wsl.enable` can't be referenced in a Darwin eval at all).
 
-Everything is pinned to the **nixos-25.11** release across all inputs, with a single
-`nixpkgs` (`follows` threaded through every input).
+The shared modules are **option-driven**: behavior lives in the module, per-machine values
+come from the `publicHome.*` options a host sets — `username` (derives `homeDirectory`),
+`git.{userName,userEmail,signingKey,sshSigningProgram}`, and `configRoot` (where the repo
+is checked out, used by the out-of-store dotfile symlinks). This is what lets the public
+modules carry no identity/secrets: each host — and the private work repo — supplies its own.
+
+The interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
+shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to the
+**nixos-25.11** release across all inputs, with a single `nixpkgs` (`follows` threaded
+through every input).
 
 ## Applying changes
 
@@ -54,10 +73,11 @@ home-manager switch --flake .#shane@macbook
 ```
 
 Edit the layer that fits the change:
-- Shared across all hosts (your packages, git, bash) → `modules/home/common.nix` /
-  `lib/packages.nix`
+- Shared CLI packages → `lib/packages.nix`
+- Shared behavior (git, shell, rust, bun) → the matching `modules/home/*.nix`
+- Per-machine values (identity, checkout path) → `publicHome.*` in the host file
 - Linux/WSL-only → `modules/home/linux.nix`, `modules/nixos/*`
-- macOS-only → `modules/home/darwin.nix`
+- macOS-only (GUI/terminal) → `modules/home/darwin.nix` (+ vscode/warp/jetbrains)
 
 The flake is read from the git tree, so **new files must be `git add`-ed** before a
 rebuild/switch will see them.
@@ -82,7 +102,10 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
 - adds this repo as a flake input (`inputs.personal.inputs.nixpkgs.follows = "nixpkgs"`
   to keep a single nixpkgs);
 - defines a standalone `homeConfigurations."shane@work-mac"` importing
-  `personal.homeModules.default` + `personal.homeModules.darwin`, plus work-only packages;
+  `personal.homeModules.default` + `personal.homeModules.darwin`, then sets its own
+  `publicHome.git.{userName,userEmail,signingKey,sshSigningProgram}` and adds the
+  work-only bits the public seed deliberately omitted: work session vars / CLI wrappers,
+  a private Cargo registry overlay on `~/.cargo/config.toml`, and any work-only packages;
 - runs on **Determinate Nix**, so it sets `nix.enable = false` to let Determinate own
   Nix's config (which is why `modules/home/common.nix` carries **no** `nix.*` settings —
   keep it that way);

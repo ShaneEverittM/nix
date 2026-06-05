@@ -1,0 +1,8 @@
+---
+"requested_command:edit": none
+"code_view:close_all_tabs": none
+"code_view:close_saved_tabs": none
+"pane_group:navigate_prev": cmd-e
+"code_diff_view:edit_requested_edit": none
+"pane_group:navigate_next": cmd-r
+"pane_group:toggle_maximize_pane": shift-cmd-M

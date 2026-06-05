@@ -1,9 +1,8 @@
 # Linux-only home-manager bits. Imported by the WSL host (and any future personal
-# Linux host) alongside ./common.nix.
+# Linux host) alongside ./common.nix. (homeDirectory is derived in common.nix from
+# publicHome.username.)
 { ... }:
 {
-  home.homeDirectory = "/home/shane";
-
   # Re-add `code .` support. Disabling appendWindowsPath (in modules/nixos/wsl.nix)
   # dropped the whole Windows PATH, including VS Code's bin dir. Put back just
   # that one dir — it contains only code/code.cmd/code-tunnel.exe (no

@@ -1,0 +1,25 @@
+name: JetBrains IDE Light
+accent: '#3574F0'
+cursor: '#27282E'
+background: '#FFFFFF'
+foreground: '#27282E'
+details: lighter
+terminal_colors:
+  normal:
+    black: '#27282E'
+    red: '#CC3645'
+    green: '#067D17'
+    yellow: '#9E880D'
+    blue: '#0033B3'
+    magenta: '#871094'
+    cyan: '#096A6E'
+    white: '#DFE1E5'
+  bright:
+    black: '#6C707E'
+    red: '#DE1B2E'
+    green: '#55A76A'
+    yellow: '#DF9303'
+    blue: '#3574F0'
+    magenta: '#7444D4'
+    cyan: '#3FB3B8'
+    white: '#F7F8FA'

@@ -16,10 +16,16 @@ inputs.nixpkgs.lib.nixosSystem {
     {
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
-      home-manager.users.shane.imports = [
-        ../../modules/home/common.nix
-        ../../modules/home/linux.nix
-      ];
+      home-manager.users.shane = {
+        imports = [
+          ../../modules/home # core bundle (common + git + shell + rust + bun)
+          ../../modules/home/linux.nix
+        ];
+        # Personal git identity (already public). The work Mac sets its own in the
+        # private nix-work repo.
+        publicHome.git.userName = "Shane Murphy";
+        publicHome.git.userEmail = "mail@shanemurphy.space";
+      };
     }
     ../../modules/nixos/common.nix
     ../../modules/nixos/wsl.nix

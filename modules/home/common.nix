@@ -1,39 +1,66 @@
 # Platform-agnostic home-manager config, shared by every host (WSL, personal Mac,
 # work Mac). Anything here must hold on both Linux and Darwin — OS-specific bits live
-# in ./linux.nix and ./darwin.nix, which set home.homeDirectory and add host-only paths.
+# in ./linux.nix and ./darwin.nix.
+#
+# This module owns the `publicHome.*` option namespace: the shared modules carry
+# behavior, each host (and the downstream private work repo) supplies the values
+# (username, git identity, where the repo is checked out).
 #
 # NOTE: keep this module free of any `nix.*` settings. The work Mac runs Determinate
 # Nix (which owns Nix's own config) and consumes this module via standalone
 # home-manager; managing Nix here would fight Determinate. All nix.settings/nixPath
 # live in modules/nixos/* instead, which only the WSL host imports.
-{ config, lib, pkgs, ... }:
 {
-  home.username = "shane";
-  home.stateVersion = "25.11";
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
-  programs.home-manager.enable = true;
+let
+  cfg = config.publicHome;
+in
+{
+  options.publicHome = {
+    username = lib.mkOption {
+      type = lib.types.str;
+      default = "shane";
+      description = "Login user name; also derives home.homeDirectory.";
+    };
 
-  # Let home-manager manage bash. This is what sources hm-session-vars.sh (and
-  # thus applies home.sessionPath below) — without an HM-managed shell, those
-  # session vars are written but never sourced. (This is unrelated to the
-  # earlier reverted set-environment hack; it adds no bashrcExtra.)
-  programs.bash.enable = true;
+    homeDirectory = lib.mkOption {
+      type = lib.types.str;
+      default = if pkgs.stdenv.isDarwin then "/Users/${cfg.username}" else "/home/${cfg.username}";
+      description = "Home directory. Defaults to the platform-standard path for username.";
+    };
 
-  # mkAfter keeps ~/.local/bin last in PATH — host modules (e.g. linux.nix's VS Code
-  # dir) take precedence, matching the original ordering before this split.
-  home.sessionPath = lib.mkAfter [
-    "${config.home.homeDirectory}/.local/bin"
-  ];
-
-  # git lives here so its identity is declarative (replaces a hand-edited
-  # ~/.gitconfig). Uncomment and fill in your details, then rebuild.
-  programs.git = {
-    enable = true;
-    settings.user.name = "Shane Murphy";
-    settings.user.email = "mail@shanemurphy.space";
-    settings.init.defaultBranch = "main";
+    configRoot = lib.mkOption {
+      type = lib.types.str;
+      default = "${cfg.homeDirectory}/.config/home-manager";
+      description = ''
+        Where this repo is checked out on the target machine. Used by the
+        out-of-store symlinks in vscode.nix/warp.nix (so the dotfiles stay live-
+        editable) and the `hm` shell alias. Macs run the hm.ts workflow from here;
+        WSL leaves the default since those modules are not imported there.
+      '';
+    };
   };
 
-  # The cross-host shared package set (see lib/packages.nix).
-  home.packages = import ../../lib/packages.nix pkgs;
+  config = {
+    home.username = cfg.username;
+    home.homeDirectory = cfg.homeDirectory;
+    home.stateVersion = "25.11";
+
+    programs.home-manager.enable = true;
+    news.display = "silent";
+
+    # mkAfter keeps ~/.local/bin last in PATH — host modules (e.g. linux.nix's VS
+    # Code dir) take precedence.
+    home.sessionPath = lib.mkAfter [
+      "${cfg.homeDirectory}/.local/bin"
+    ];
+
+    # The cross-host shared package set (see lib/packages.nix).
+    home.packages = import ../../lib/packages.nix pkgs;
+  };
 }
