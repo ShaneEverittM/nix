@@ -30,6 +30,7 @@ pkgs: with pkgs; [
   sshpass
   btop # system monitor
   p7zip
+  gh
 
   # Languages / runtimes (rustup -> rust.nix, bun -> bun.nix, mise -> unstable-packages.nix)
   uv # Python package/runtime manager
