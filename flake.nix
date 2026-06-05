@@ -9,6 +9,13 @@
 
     home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+
+    # Shane's Warp fork with experimental Nix support (the OSS build, source-
+    # compiled). Deliberately NOT `follows`-ed onto our nixpkgs: it pins
+    # nixos-unstable + crane + rust-overlay for the Rust toolchain, so forcing our
+    # 25.11 would risk breaking its build. It's an isolated, Mac-only input — only
+    # realized when a host sets programs.warp.packageSource (default "none").
+    warp.url = "github:ShaneMurphy2/warp/darwin-flake";
   };
 
   outputs =
