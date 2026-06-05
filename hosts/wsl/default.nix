@@ -27,9 +27,12 @@ inputs.nixpkgs.lib.nixosSystem {
         publicHome.git.userEmail = "mail@shanemurphy.space";
 
         # Bridge the Windows 1Password SSH agent into WSL (ssh + git auth without a
-        # key on disk). Requires the Windows-side setup in the README. Override
-        # `.npiperelay` if npiperelay.exe isn't at the scoop default path.
+        # key on disk). Requires the Windows-side setup in the README.
         publicHome.onepassword.sshAgentRelay = true;
+        # npiperelay installed via winget; its package folder is stable across
+        # updates. (A full path is required here anyway — this config disables the
+        # Windows PATH in WSL, see modules/nixos/wsl.nix.)
+        publicHome.onepassword.npiperelay = "/mnt/c/Users/shane/AppData/Local/Microsoft/WinGet/Packages/albertony.npiperelay_Microsoft.Winget.Source_8wekyb3d8bbwe/npiperelay.exe";
 
         # Commit signing via the relayed 1Password key. DISABLED until you supply
         # your 1Password SSH *public* key below (safe to commit — it's public).
