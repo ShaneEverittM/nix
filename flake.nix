@@ -36,7 +36,7 @@
         system = "x86_64-linux";
       };
 
-      # Personal MacBook Air — `home-manager switch --flake .#shane@macbook`.
+      # Personal MacBook Air — `nh home switch -c shane@macbook`.
       # Evaluable anywhere, buildable only on a Darwin builder.
       homeConfigurations."shane@macbook" = import ./hosts/macbook/default.nix {
         inherit inputs;

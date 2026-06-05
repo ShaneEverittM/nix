@@ -1,5 +1,5 @@
 # Personal MacBook Air assembly: a standalone home-manager configuration (no
-# nix-darwin). Applied on the Mac with `home-manager switch --flake .#shane@macbook`.
+# nix-darwin). Applied on the Mac with `nh home switch -c shane@macbook`.
 # Evaluable from any system, but only buildable on a Darwin builder.
 { inputs, system }:
 
@@ -23,9 +23,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
     ../../modules/home # core bundle (common + git + shell + rust + bun)
     ../../modules/home/darwin.nix # Mac GUI bundle (vscode + warp + jetbrains)
     {
-      # Personal git identity (already public). repoRoot defaults to ~/.config/nix —
-      # where the hm.ts workflow expects the checkout, and what the vscode/warp
-      # out-of-store symlinks resolve against.
+      # Personal git identity (already public). repoRoot defaults to ~/.config/nix,
+      # which is also the default NH_HOME_FLAKE and out-of-store dotfile root.
       publicHome.git.userName = "Shane Murphy";
       publicHome.git.userEmail = "mail@shanemurphy.space";
 

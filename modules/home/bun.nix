@@ -1,5 +1,5 @@
-# Bun runtime + ensure global @types/bun is installed (so global Bun scripts like
-# scripts/hm.ts get type coverage). Shared by every host.
+# Bun runtime + ensure global @types/bun is installed for ad-hoc Bun scripts.
+# Shared by every host.
 {
   config,
   lib,

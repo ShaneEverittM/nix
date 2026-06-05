@@ -55,15 +55,19 @@ in
       description = "Whether public dotfiles are copied from the flake store or linked live from publicHome.repoRoot.";
     };
 
-    hmScript = lib.mkOption {
+    nh.homeFlake = lib.mkOption {
       type = lib.types.nullOr (
         lib.types.oneOf [
           lib.types.str
           lib.types.path
         ]
       );
-      default = "${toString cfg.repoRoot}/scripts/hm.ts";
-      description = "Optional script path used for the zsh hm alias.";
+      default = cfg.repoRoot;
+      description = ''
+        Flake path exported as NH_HOME_FLAKE for nh home commands. Public hosts
+        usually use publicHome.repoRoot; downstream private overlays should set
+        this to their own consuming flake root.
+      '';
     };
   };
 
@@ -83,5 +87,12 @@ in
 
     # The cross-host shared package set (see lib/packages.nix).
     home.packages = import ../../lib/packages.nix pkgs;
+
+    programs.nh = {
+      enable = true;
+    }
+    // lib.optionalAttrs (cfg.nh.homeFlake != null) {
+      homeFlake = toString cfg.nh.homeFlake;
+    };
   };
 }

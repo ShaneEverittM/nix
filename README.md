@@ -19,7 +19,6 @@ lib/
                        by every host's home.packages and by packages.default.
 files/                 Public dotfiles. Hosts choose store-backed copies or live
                        out-of-store symlinks via publicHome.dotfiles.mode.
-scripts/hm.ts          Bun helper: build/switch/add/update + Brewfile apply. Mac workflow.
 Brewfile               macOS casks/formulae base (Mac-only).
 modules/
   home/                home-manager modules (the universal sharing layer):
@@ -50,10 +49,11 @@ not option existence (`wsl.enable` can't be referenced in a Darwin eval at all).
 The shared modules are **option-driven**: behavior lives in the module, per-machine values
 come from the `publicHome.*` options a host sets — `username` (derives `homeDirectory`),
 `git.{userName,userEmail,signingKey,sshSigningProgram}`, `repoRoot`,
-`dotfiles.mode`, `hmScript`, and `rust.extraCargoConfig`. Public hosts can keep
+`dotfiles.mode`, `nh.homeFlake`, and `rust.extraCargoConfig`. Public hosts can keep
 live-editable out-of-store dotfile links from their checkout; downstream private
-consumers can use store-backed public dotfiles and supply their own helper script. This is what lets the public
-modules carry no identity/secrets: each host — and the private work repo — supplies its own.
+consumers can use store-backed public dotfiles and point `nh` at their own consuming
+flake. This is what lets the public modules carry no identity/secrets: each host — and
+the private work repo — supplies its own.
 
 The interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
 shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to the
@@ -71,7 +71,7 @@ sudo nixos-rebuild switch --flake .#nixos
 **Personal Mac:**
 
 ```bash
-home-manager switch --flake .#shane@macbook
+nh home switch -c shane@macbook
 ```
 
 Edit the layer that fits the change:
@@ -91,7 +91,7 @@ rebuild/switch will see them.
 
 ```bash
 nix flake update          # updates all inputs in flake.lock
-# then nixos-rebuild switch / home-manager switch as above
+# then nixos-rebuild switch / nh home switch as above
 ```
 
 To update a single input: `nix flake update nixpkgs`. Commit `flake.lock` alongside any
@@ -115,8 +115,9 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
 - pulls secrets at runtime via the **1Password CLI** (`op run` / `op inject`) — nothing
   encrypted/committed, no sops/agenix;
 - stays private only for work-internal config, not for secrets;
-- can set `publicHome.dotfiles.mode = "store"` and `publicHome.hmScript` to its own
-  private helper so public dotfiles come from the flake input while work workflow stays local.
+- can set `publicHome.dotfiles.mode = "store"` and `publicHome.nh.homeFlake` to its own
+  private repo so public dotfiles come from the flake input while `nh home` acts on the
+  downstream configuration.
 
 ## Conventions
 
