@@ -30,9 +30,13 @@ modules/
     shell.nix            zsh + zoxide, eza/bat aliases, uv/mise activation.
     rust.nix             rustup + cargo (sanitized cross-compile config).
     bun.nix              bun runtime + global @types/bun.
-    linux.nix            Linux-only — WSL VS Code PATH dir.
+    linux.nix            Linux-only — WSL VS Code PATH dir; imports ssh-agent + warp-wsl.
     darwin.nix           Mac-only bundle — imports vscode + warp + jetbrains.
     vscode.nix warp.nix jetbrains.nix   GUI/terminal dotfiles (out-of-store symlinks).
+    warp-settings.nix    Shared Warp settings schema (themeDir + overrides -> attrs),
+                         consumed by warp.nix (macOS) and warp-wsl.nix (WSL).
+    warp-wsl.nix         WSL-only — seeds the Windows-side Warp install (opt-in via
+                         publicHome.warp.wslConfig).
   nixos/               NixOS system modules (WSL host only):
     common.nix           flakes, system git, nixPath pin, stateVersion.
     wsl.nix              wsl.*, openssh, users.users.shane, nix-ld, zsh login shell.
@@ -163,6 +167,25 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
   a full WSL restart: run `wsl --shutdown` from Windows, then reopen the distro.
 - The primary user is `shane` (uid 1001); the NixOS-WSL fallback `nixos` account holds
   uid 1000.
+
+## Warp on WSL
+
+Warp under WSL is a **Windows** app, so its config lives on the Windows filesystem and
+can't be a nix-store symlink (Warp.exe can't follow one). `modules/home/warp-wsl.nix`
+therefore *copies* Nix-generated config onto `/mnt/c` during `nixos-rebuild switch`
+(declarative content, imperative placement), gated by `publicHome.warp.wslConfig`:
+
+- **settings** → `%LOCALAPPDATA%\warp\Warp\config\settings.toml`
+- **themes** → `%APPDATA%\warp\Warp\data\themes\*.yaml` (JetBrains dark/light)
+
+The settings schema is shared with the Macs (`modules/home/warp-settings.nix`); only the
+`themeDir` baked into the TOML differs (a `C:/Users/...` path Warp resolves). Override the
+Windows account with `publicHome.warp.windowsUser` (defaults to `publicHome.username`) and
+merge extra settings via `publicHome.warp.extraSettings`.
+
+Caveat: Warp **rewrites `settings.toml` at runtime** (any UI toggle), so this is a
+seed-on-switch, not a locked file — the same trade-off the macOS module accepts.
+Restart Warp after a switch to pick up changes.
 
 ## 1Password SSH agent (WSL)
 

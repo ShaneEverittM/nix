@@ -43,6 +43,11 @@ inputs.nixpkgs.lib.nixosSystem {
         # op-ssh-sign needed. git.nix enables gpg.format=ssh + commit.gpgsign and
         # wires an allowed-signers file for local verification.
         publicHome.git.signingKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3";
+
+        # Seed the Windows-side Warp install (settings.toml + JetBrains themes) so
+        # WSL's Warp matches the Macs' shared profile. Warp here is a Windows app
+        # reading %APPDATA%/%LOCALAPPDATA%; see modules/home/warp-wsl.nix.
+        publicHome.warp.wslConfig = true;
       };
     }
     ../../modules/nixos/common.nix

@@ -5,6 +5,7 @@
 {
   imports = [
     ./ssh-agent.nix # 1Password SSH agent relay (opt-in via publicHome.onepassword)
+    ./warp-wsl.nix # seed the Windows-side Warp install (opt-in via publicHome.warp.wslConfig)
   ];
 
   # Re-add `code .` support. Disabling appendWindowsPath (in modules/nixos/wsl.nix)
