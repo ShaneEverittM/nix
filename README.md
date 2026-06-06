@@ -137,6 +137,26 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
   `code .` support, uid overrides) are documented inline where they live.
 - **Commit `flake.lock`** alongside any input change.
 
+## macOS notes
+
+- The source-built `warp` fork input compiles Metal shaders, so it needs host Xcode
+  tooling that Nix can't provide. The base Command Line Tools are **not** enough: since
+  Xcode 16 / macOS Sequoia the Metal compiler ships as a separate downloadable component,
+  and the `xcodebuild -downloadComponent` mechanism only exists in **full Xcode** (the CLT
+  has no `xcodebuild`). Install full Xcode, then:
+
+  ```bash
+  # Point the active developer dir at full Xcode (away from /Library/Developer/CommandLineTools)
+  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+  sudo xcodebuild -license accept
+
+  # Metal compiler — separate component since Xcode 16
+  xcodebuild -downloadComponent MetalToolchain
+  ```
+
+  Verify the Metal toolchain is present with `xcrun -f metal`. Only needed when a host
+  sets `programs.warp.packageSource = "local-oss"`.
+
 ## WSL notes
 
 - Some `wsl.wslConf.*` settings (e.g. `interop.appendWindowsPath`) only take effect after
