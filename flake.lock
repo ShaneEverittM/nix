@@ -159,11 +159,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1780786287,
-        "narHash": "sha256-3S42Wb6glBZVEm/ifcJzmPegiWsBAvl6uuqBHWjS0c0=",
+        "lastModified": 1780789348,
+        "narHash": "sha256-Qq9rQlQuEdKxlXz/U8w52PBm0TkuKRjwANTNW28c4Ps=",
         "owner": "ShaneMurphy2",
         "repo": "warp",
-        "rev": "e83e515bcd85b44822f3c03cff9a172287c421c0",
+        "rev": "5a424fbc60bcc4b2ab6b78047b353de2c2bd1c95",
         "type": "github"
       },
       "original": {
