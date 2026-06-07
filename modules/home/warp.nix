@@ -52,6 +52,20 @@ in
   config = {
     home.packages = lib.optional (cfg.packageSource != "none") warpPackages.${cfg.packageSource};
 
+    # Each `nh home switch` rebuilds the .app at a fresh /nix/store path, but macOS
+    # keeps the icon keyed to the old path, so Finder/Dock fall back to a generic
+    # folder until the app runs (the running app sets its own Dock icon directly).
+    # Re-register the bundle with LaunchServices after linking to refresh the icon.
+    home.activation = lib.mkIf (pkgs.stdenv.isDarwin && cfg.packageSource != "none") {
+      registerWarpOss = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        app="${config.home.homeDirectory}/Applications/Home Manager Apps/WarpOss.app"
+        lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister"
+        if [ -d "$app" ] && [ -x "$lsregister" ]; then
+          run "$lsregister" -f "$app"
+        fi
+      '';
+    };
+
     home.file = {
       ".warp/settings.toml" = {
         source = warpToml.generate "warp-settings.toml" (settingsFor ".warp");
