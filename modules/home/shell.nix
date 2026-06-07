@@ -44,4 +44,14 @@
     # integration places it too early, before mise.
     enableZshIntegration = false;
   };
+
+  # Per-directory environments. nix-direnv adds the fast, GC-cached `use flake`
+  # implementation so entering a repo with a flake.nix reuses its dev shell
+  # instead of re-evaluating on every cd. The zsh hook is installed by
+  # home-manager's integration; it runs before the zoxide hook (mkOrder 2000),
+  # which is fine — direnv only needs to load before the prompt is drawn.
+  programs.direnv = {
+    enable = true;
+    nix-direnv.enable = true;
+  };
 }
