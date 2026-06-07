@@ -8,3 +8,6 @@ cask "visual-studio-code"
 cask "zed"
 cask "swift-shift"
 cask "jetbrains-toolbox"
+
+# VS Code extensions (managed here so they install on a new machine).
+vscode "vscodevim.vim"

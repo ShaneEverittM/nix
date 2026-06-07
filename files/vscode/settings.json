@@ -33,5 +33,9 @@
       "markdown": false,
       "scminput": false
    },
-   "scm.repositories.selectionMode": "single"
+   "scm.repositories.selectionMode": "single",
+   "vim.useSystemClipboard": true,
+   "vim.hlsearch": true,
+   "vim.leader": "<space>",
+   "editor.lineNumbers": "relative"
 }
