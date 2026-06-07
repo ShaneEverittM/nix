@@ -49,6 +49,14 @@ inputs.nixpkgs.lib.nixosSystem {
         # reading %APPDATA%/%LOCALAPPDATA%; see modules/home/warp-wsl.nix.
         publicHome.warp.wslConfig = true;
       };
+
+      # Enable the NixOS-side nh so `nh os switch`/`nh os boot` work without a
+      # flake path. NH_OS_FLAKE mirrors the home side's NH_HOME_FLAKE: both point
+      # at this repo's checkout (publicHome.repoRoot defaults to ~/.config/nix).
+      programs.nh = {
+        enable = true;
+        flake = "/home/shane/.config/nix";
+      };
     }
     ../../modules/nixos/common.nix
     ../../modules/nixos/wsl.nix
