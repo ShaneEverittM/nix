@@ -1,14 +1,32 @@
 {
-   "editor.lineHeight": 1.8,
-   "workbench.tree.indent": 16,
-   "workbench.tree.renderIndentGuides": "always",
-   "editor.minimap.showSlider": "always",
-   "window.zoomLevel": 2,
-   "chat.viewSessions.orientation": "stacked",
-   "files.autoSave": "afterDelay",
-   "diffEditor.renderSideBySide": false,
+   // Assistant UI defaults.
+   "chat.tips.enabled": false,
+   "claudeCode.preferredLocation": "panel",
+
+   // Diff editor readability.
    "diffEditor.hideUnchangedRegions.enabled": true,
-   "window.autoDetectColorScheme": true,
+   "diffEditor.renderSideBySide": false,
+
+   // Core editor behavior and typography.
+   "editor.fontLigatures": false,
+   "editor.inlayHints.enabled": "offUnlessPressed",
+   "editor.lineHeight": 1.8,
+   "editor.lineNumbers": "relative",
+   "editor.minimap.enabled": false,
+   "editor.minimap.showSlider": "always",
+
+   // File persistence.
+   "files.autoSave": "afterDelay",
+
+   // Disable Copilot suggestions by default, including prose and commit input.
+   "github.copilot.enable": {
+      "*": false,
+      "markdown": false,
+      "plaintext": false,
+      "scminput": false
+   },
+
+   // Trusted JSON schema sources.
    "json.schemaDownload.trustedDomains": {
       "https://developer.microsoft.com/json-schemas/": true,
       "https://json-schema.org/": true,
@@ -19,22 +37,25 @@
       "https://schemastore.azurewebsites.net/": true,
       "https://www.schemastore.org/": true
    },
-   "editor.inlayHints.enabled": "offUnlessPressed",
-   "editor.fontLigatures": false,
-   "workbench.activityBar.compact": true,
-   "editor.minimap.enabled": false,
-   "workbench.editor.useModal": "some",
-   "github.copilot.enable": {
-      "*": false,
-      "plaintext": false,
-      "markdown": false,
-      "scminput": false
-   },
+
+   // Source control navigation.
    "scm.repositories.selectionMode": "single",
-   "vim.useSystemClipboard": true,
+
+   // Vim extension behavior.
    "vim.hlsearch": true,
    "vim.leader": "<space>",
-   "editor.lineNumbers": "relative",
-   "claudeCode.preferredLocation": "panel",
-   "python.languageServer": "Default"
+   "vim.useSystemClipboard": true,
+
+   // Window appearance.
+   "window.autoDetectColorScheme": true,
+   "window.zoomLevel": 2,
+
+   // Workbench layout.
+   "workbench.activityBar.compact": true,
+   "workbench.activityBar.location": "top",
+   "workbench.editor.useModal": "some",
+   "workbench.tree.indent": 16,
+   "workbench.tree.renderIndentGuides": "always",
+   "chat.agent.thinkingStyle": "collapsed",
+   "chat.viewSessions.orientation": "stacked"
 }
