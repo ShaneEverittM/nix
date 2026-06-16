@@ -49,6 +49,7 @@
    // Window appearance.
    "window.autoDetectColorScheme": true,
    "window.zoomLevel": 2,
+   "window.nativeTabs": true,
 
    // Workbench layout.
    "workbench.activityBar.compact": true,
