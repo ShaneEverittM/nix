@@ -35,6 +35,19 @@
       # its hook may be shadowed. mkOrder 2000 puts it after every other init
       # contributor (incl. the WSL agent relay at 1500).
       (lib.mkOrder 2000 ''eval "$(${config.programs.zoxide.package}/bin/zoxide init zsh)"'')
+      (lib.mkAfter ''
+        # Warpify this zsh only when explicitly requested (the `dev` function sets
+        # WARP_BOOTSTRAP_SUBSHELL). Opt-in, so it never fires for the top-level Warp
+        # shell or for incidental nested zsh.
+        if [ -n "$WARP_BOOTSTRAP_SUBSHELL" ] && [ "$TERM_PROGRAM" = "WarpTerminal" ] \
+             && [ -t 1 ] && [[ $- == *i* ]]; then
+          unset WARP_BOOTSTRAP_SUBSHELL
+          printf '\eP$f{"hook": "SourcedRcFileForWarp", "value": { "shell": "zsh" }}\x9c'
+        fi
+
+        # Drop into a warpified zsh dev shell for the flake in the current dir.
+        dev() { WARP_BOOTSTRAP_SUBSHELL=1 nix develop "$@" -c zsh; }
+      '')
     ];
   };
 
