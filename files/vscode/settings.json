@@ -1,6 +1,4 @@
 {
-   "editor.fontFamily": "JetBrainsMono Nerd Font",
-   "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
    "editor.lineHeight": 1.8,
    "workbench.tree.indent": 16,
    "workbench.tree.renderIndentGuides": "always",
@@ -22,10 +20,9 @@
       "https://www.schemastore.org/": true
    },
    "editor.inlayHints.enabled": "offUnlessPressed",
-   "editor.fontLigatures": true,
+   "editor.fontLigatures": false,
    "workbench.activityBar.compact": true,
    "editor.minimap.enabled": false,
-   "window.nativeTabs": true,
    "workbench.editor.useModal": "some",
    "github.copilot.enable": {
       "*": false,
@@ -37,5 +34,7 @@
    "vim.useSystemClipboard": true,
    "vim.hlsearch": true,
    "vim.leader": "<space>",
-   "editor.lineNumbers": "relative"
+   "editor.lineNumbers": "relative",
+   "claudeCode.preferredLocation": "panel",
+   "python.languageServer": "Default"
 }
