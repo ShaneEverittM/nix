@@ -14,6 +14,7 @@ pkgs: with pkgs; [
   # Nix tooling
   nixd # Nix language server (used by VS Code nix-ide)
   nixfmt-rfc-style # official RFC-style formatter; provides `nixfmt`
+  fh # official FlakeHub CLI
   manix # fast CLI search over NixOS/HM option + nixpkgs docs (`manix ssh`)
 
   # Git extras (programs.git provides git itself; these back its config in git.nix)
