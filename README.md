@@ -31,8 +31,9 @@ modules/
     rust.nix             rustup + cargo (sanitized cross-compile config).
     bun.nix              bun runtime + global @types/bun.
     linux.nix            Linux-only — WSL VS Code PATH dir; imports ssh-agent + warp-wsl.
-    darwin.nix           Mac-only bundle — imports vscode + warp + jetbrains.
-    vscode.nix warp.nix jetbrains.nix   GUI/terminal dotfiles (out-of-store symlinks).
+    darwin.nix           Mac-only bundle — imports vscode + zed + warp + jetbrains.
+    vscode.nix zed.nix warp.nix jetbrains.nix   GUI/terminal dotfiles
+                                                 (out-of-store symlinks).
     warp-settings.nix    Shared Warp settings schema (themeDir + overrides -> attrs),
                          consumed by warp.nix (macOS) and warp-wsl.nix (WSL).
     warp-wsl.nix         WSL-only — seeds the Windows-side Warp install (opt-in via

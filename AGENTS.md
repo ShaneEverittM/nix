@@ -24,7 +24,7 @@ Keep this repo safe to publish. Do not add secrets, work-internal settings, toke
 | `modules/home/{git,shell,rust,bun}.nix` | Shared home-manager behavior imported everywhere. |
 | `modules/home/linux.nix` | Linux/WSL-only home-manager layer. |
 | `modules/home/darwin.nix` | macOS-only home-manager bundle for GUI/terminal config. |
-| `modules/home/{vscode,warp,jetbrains}.nix` | macOS dotfile/app modules. |
+| `modules/home/{vscode,zed,warp,jetbrains}.nix` | macOS dotfile/app modules. |
 | `modules/home/warp-settings.nix` | Shared Warp settings attr schema used by macOS and WSL seeders. |
 | `modules/home/warp-wsl.nix` | WSL activation step that copies generated Warp config to Windows paths. |
 | `modules/home/ssh-agent.nix` | WSL 1Password SSH agent relay. |

@@ -81,7 +81,7 @@
       homeModules = {
         default = import ./modules/home; # core bundle (common + git + shell + rust + bun)
         linux = import ./modules/home/linux.nix; # WSL extras
-        darwin = import ./modules/home/darwin.nix; # Mac GUI bundle (vscode + warp + jetbrains)
+        darwin = import ./modules/home/darwin.nix; # Mac GUI bundle (vscode + zed + warp + jetbrains)
 
         # Individual modules, for finer-grained downstream composition.
         common = import ./modules/home/common.nix;
@@ -90,6 +90,7 @@
         rust = import ./modules/home/rust.nix;
         bun = import ./modules/home/bun.nix;
         vscode = import ./modules/home/vscode.nix;
+        zed = import ./modules/home/zed.nix;
         warp = import ./modules/home/warp.nix;
         jetbrains = import ./modules/home/jetbrains.nix;
       };
