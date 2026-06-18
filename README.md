@@ -69,6 +69,14 @@ shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to t
 used only for the small cross-host package lane in `lib/unstable-packages.nix`, for
 tools that need to move faster than the release branch.
 
+## AI agent guide
+
+AI coding agents should read [`AGENTS.md`](AGENTS.md) before making changes. It is the
+quick-reference version of the repo shape, safety constraints, edit locations, and
+validation commands. Claude gets the same guidance via the [`CLAUDE.md`](CLAUDE.md)
+symlink, and GitHub Copilot gets a short entrypoint through
+[`.github/copilot-instructions.md`](.github/copilot-instructions.md).
+
 ## Applying changes
 
 **WSL (this machine):**
