@@ -1,0 +1,73 @@
+[
+  {
+    "context": "VimControl",
+    "bindings": {
+      "space r": "task::Spawn",
+    },
+  },
+  {
+    // Key bindings that work only in normal mode.
+    "context": "Editor && vim_mode == normal && !VimWaiting && !menu",
+    "bindings": {
+      "shift-l": "editor::MoveToEndOfLine",
+      "shift-h": "editor::MoveToBeginningOfLine",
+    },
+  },
+  {
+    // Key bindings that work only in visual mode.
+    "context": "Editor && vim_mode == visual && !VimWaiting && !menu",
+    "bindings": {
+      "shift-l": "editor::SelectToEndOfLine",
+      "shift-h": "editor::SelectToBeginningOfLine",
+    },
+  },
+  {
+    // Key bindings that work only anywhere vim bindings work.
+    "context": "VimControl",
+    "bindings": {
+      "space t": "tab_switcher::Toggle",
+    },
+  },
+  {
+    "context": "(VimControl && !menu)",
+    "bindings": {
+      "space space": "pane::GoBack",
+    },
+  },
+  {
+    "context": "(Workspace || Editor)",
+    "bindings": {
+      "ctrl-j": "terminal_panel::Toggle",
+    },
+  },
+  {
+    "context": "(Workspace || Editor)",
+    "bindings": {
+      "cmd-j": "terminal_panel::Toggle",
+    },
+  },
+  {
+    "context": "(Editor && mode == full)",
+    "bindings": {
+      "cmd-e": null
+    }
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "cmd-e": null
+    }
+  },
+  {
+    "context": "(((((Dock || Workspace) || OutlinePanel) || ProjectPanel) || CollabPanel) || (Editor && mode == auto_height))",
+    "bindings": {
+      "cmd-e": "editor::ToggleFocus"
+    }
+  },
+  {
+    "context": "(OutlinePanel && not_editing)",
+    "bindings": {
+      "cmd-e": "editor::ToggleFocus"
+    }
+  }
+]

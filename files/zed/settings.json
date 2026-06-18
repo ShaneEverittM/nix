@@ -1,0 +1,109 @@
+// Zed settings
+//
+// For information on how to configure Zed, see the Zed
+// documentation: https://zed.dev/docs/configuring-zed
+//
+// To see all of Zed's default settings without changing your
+// custom settings, run the `open default settings` command
+// from the command palette or from `Zed` application menu.
+{
+  // Window, layout, and panels
+  "cli_default_open_behavior": "new_window",
+  "collaboration_panel": {
+    "button": false,
+  },
+  "git_panel": {
+    "dock": "left",
+    "tree_view": true,
+  },
+  "outline_panel": {
+    "dock": "right",
+  },
+  "project_panel": {
+    "dock": "left",
+  },
+  "terminal": {
+    "dock": "bottom",
+    "line_height": "standard",
+  },
+  "use_system_window_tabs": true,
+
+  // Theme and typography
+  "buffer_font_family": "JetBrainsMono Nerd Font",
+  "buffer_font_size": 20.0,
+  "theme": {
+    "dark": "JetBrains New Dark",
+    "light": "One Light",
+    "mode": "system",
+  },
+  "ui_font_size": 20.0,
+  "agent_buffer_font_size": 20,
+
+  // Editor behavior
+  "auto_signature_help": false,
+  "autosave": "on_focus_change",
+  "diff_view_style": "unified",
+  "format_on_save": "on",
+  "inlay_hints": {
+    "show_other_hints": true,
+  },
+  "inline_code_actions": false,
+  "soft_wrap": "editor_width",
+
+  // Keymap and Vim ergonomics
+  "base_keymap": "JetBrains",
+  "vim_mode": true,
+  "which_key": {
+    "enabled": true,
+  },
+
+  // AI, agents, and edit predictions
+  "disable_ai": false,
+  "agent": {
+    "default_model": {
+      "effort": "high",
+      "enable_thinking": true,
+      "model": "gpt-5.5",
+      "provider": "openai",
+      "speed": "standard",
+    },
+    "default_profile": "write",
+    "dock": "right",
+    "inline_assistant_model": {
+      "enable_thinking": false,
+      "model": "gpt-5",
+      "provider": "openai",
+    },
+    "model_parameters": [],
+    "sidebar_side": "right"
+  },
+  "edit_predictions": {
+    "allow_data_collection": "no",
+    "copilot": {
+      "enable_next_edit_suggestions": false,
+    },
+    "mode": "subtle",
+    "provider": "copilot",
+  },
+  "show_edit_predictions": true,
+
+  // Language servers and per-language settings
+  "languages": {
+    "Nix": {
+      "language_servers": ["nixd", "!nil"],
+    },
+  },
+
+  // Git
+  "git": {
+    "inline_blame": {
+      "enabled": false,
+    },
+  },
+
+  // Privacy and telemetry
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+  },
+}
