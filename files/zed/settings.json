@@ -8,6 +8,16 @@
 // from the command palette or from `Zed` application menu.
 {
   // Window, layout, and panels
+  "agent_servers": {
+    "claude-acp": {
+      "default_config_options": {
+        "mode": "auto",
+        "effort": "high",
+        "model": "opus",
+      },
+      "type": "registry",
+    },
+  },
   "cli_default_open_behavior": "new_window",
   "collaboration_panel": {
     "button": false,
@@ -29,15 +39,16 @@
   "use_system_window_tabs": true,
 
   // Theme and typography
-  "buffer_font_family": "JetBrainsMono Nerd Font",
-  "buffer_font_size": 20.0,
   "theme": {
-    "dark": "JetBrains New Dark",
-    "light": "One Light",
+    "dark": "JetBrains Islands Dark",
+    "light": "JetBrains Islands Light",
     "mode": "system",
   },
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 20.0,
   "ui_font_size": 20.0,
   "agent_buffer_font_size": 20,
+  "agent_ui_font_size": 24,
 
   // Editor behavior
   "auto_signature_help": false,
@@ -75,7 +86,7 @@
       "provider": "openai",
     },
     "model_parameters": [],
-    "sidebar_side": "right"
+    "sidebar_side": "right",
   },
   "edit_predictions": {
     "allow_data_collection": "no",
