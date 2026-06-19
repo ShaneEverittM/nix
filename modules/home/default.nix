@@ -9,5 +9,6 @@
     ./shell.nix # zsh + ergonomics
     ./rust.nix # rustup + cargo
     ./bun.nix # bun runtime
+    ./java.nix # jdk (LTS) + stable JAVA_HOME symlink for gradle/JetBrains
   ];
 }
