@@ -3,6 +3,21 @@
 # in modules/nixos/wsl.nix; macOS already defaults to zsh.
 { config, lib, ... }:
 
+let
+  # Auto-Warpify hook: emit the SourcedRcFileForWarp control sequence on every
+  # interactive shell so Warp warpifies subshells automatically (nix develop,
+  # nested zsh/bash, etc.). Guarded on TERM_PROGRAM/tty/interactive so it stays
+  # silent in non-Warp terminals (Apple Terminal, ssh, WSL without Warp), which
+  # would otherwise print the raw escape sequence. Harmless no-op in the
+  # top-level Warp shell, which is already warpified. The syntax is valid in both
+  # zsh and bash, so the same snippet is shared by both. nix develop sources
+  # ~/.bashrc, so warpifying bash covers `nix develop` dev shells.
+  warpifyHook = shell: ''
+    if [ "$TERM_PROGRAM" = "WarpTerminal" ] && [ -t 1 ] && [[ $- == *i* ]]; then
+      printf '\eP$f{"hook": "SourcedRcFileForWarp", "value": { "shell": "${shell}", "uname": "%s" }}\x9c' "$(uname)"
+    fi
+  '';
+in
 {
   programs.zsh = {
     enable = true;
@@ -35,20 +50,15 @@
       # its hook may be shadowed. mkOrder 2000 puts it after every other init
       # contributor (incl. the WSL agent relay at 1500).
       (lib.mkOrder 2000 ''eval "$(${config.programs.zoxide.package}/bin/zoxide init zsh)"'')
-      (lib.mkAfter ''
-        # Warpify this zsh only when explicitly requested (the `dev` function sets
-        # WARP_BOOTSTRAP_SUBSHELL). Opt-in, so it never fires for the top-level Warp
-        # shell or for incidental nested zsh.
-        if [ -n "$WARP_BOOTSTRAP_SUBSHELL" ] && [ "$TERM_PROGRAM" = "WarpTerminal" ] \
-             && [ -t 1 ] && [[ $- == *i* ]]; then
-          unset WARP_BOOTSTRAP_SUBSHELL
-          printf '\eP$f{"hook": "SourcedRcFileForWarp", "value": { "shell": "zsh" }}\x9c'
-        fi
-
-        # Drop into a warpified zsh dev shell for the flake in the current dir.
-        dev() { WARP_BOOTSTRAP_SUBSHELL=1 nix develop "$@" -c zsh; }
-      '')
+      (lib.mkAfter (warpifyHook "zsh"))
     ];
+  };
+
+  # nix develop drops into bash and sources ~/.bashrc, so warpify bash too; this
+  # is what lets `nix develop` dev shells get warpified without a wrapper.
+  programs.bash = {
+    enable = true;
+    initExtra = warpifyHook "bash";
   };
 
   programs.zoxide = {
