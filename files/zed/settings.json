@@ -49,6 +49,7 @@
   "ui_font_size": 20.0,
   "agent_buffer_font_size": 20,
   "agent_ui_font_size": 24,
+  "git_commit_buffer_font_size": 20,
 
   // Editor behavior
   "auto_signature_help": false,
