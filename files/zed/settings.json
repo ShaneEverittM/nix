@@ -72,6 +72,15 @@
   // AI, agents, and edit predictions
   "disable_ai": false,
   "agent": {
+    "thinking_display": "always_collapsed",
+    "tool_permissions": {
+      "default": "allow",
+      "tools": {
+        "delete_path": {
+          "default": "confirm"
+        }
+      }
+    },
     "default_model": {
       "effort": "high",
       "enable_thinking": true,
@@ -83,7 +92,7 @@
     "dock": "right",
     "inline_assistant_model": {
       "enable_thinking": false,
-      "model": "gpt-5",
+      "model": "gpt-5.5",
       "provider": "openai",
     },
     "model_parameters": [],
