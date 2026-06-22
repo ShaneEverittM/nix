@@ -28,7 +28,7 @@ inputs.nixpkgs.lib.nixosSystem {
         # Personal git identity (already public). The work Mac sets its own in the
         # private nix-work repo.
         publicHome.git.userName = "Shane Murphy";
-        publicHome.git.userEmail = "mail@shanemurphy.space";
+        publicHome.git.userEmail = "mail@semurphy.com";
 
         # Bridge the Windows 1Password SSH agent into WSL (ssh + git auth without a
         # key on disk). Requires the Windows-side setup in the README.
