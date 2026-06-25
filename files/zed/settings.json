@@ -77,9 +77,9 @@
       "default": "allow",
       "tools": {
         "delete_path": {
-          "default": "confirm"
-        }
-      }
+          "default": "confirm",
+        },
+      },
     },
     "default_model": {
       "effort": "high",
