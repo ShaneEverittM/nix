@@ -4,8 +4,15 @@
 { inputs, system }:
 
 let
-  pkgs = import inputs.nixpkgs { inherit system; };
-  pkgsUnstable = import inputs.nixpkgs-unstable { inherit system; };
+  nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
+  pkgs = import inputs.nixpkgs {
+    inherit system;
+    config = nixpkgsConfig;
+  };
+  pkgsUnstable = import inputs.nixpkgs-unstable {
+    inherit system;
+    config = nixpkgsConfig;
+  };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;

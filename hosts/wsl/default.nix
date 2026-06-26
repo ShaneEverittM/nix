@@ -4,7 +4,11 @@
 { inputs, system }:
 
 let
-  pkgsUnstable = import inputs.nixpkgs-unstable { inherit system; };
+  nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
+  pkgsUnstable = import inputs.nixpkgs-unstable {
+    inherit system;
+    config = nixpkgsConfig;
+  };
 in
 inputs.nixpkgs.lib.nixosSystem {
   inherit system;
@@ -17,6 +21,8 @@ inputs.nixpkgs.lib.nixosSystem {
     inputs.nixos-wsl.nixosModules.default
     inputs.home-manager.nixosModules.home-manager
     {
+      nixpkgs.config = nixpkgsConfig;
+
       home-manager.extraSpecialArgs = { inherit pkgsUnstable; };
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;

@@ -24,6 +24,8 @@
   outputs =
     inputs@{ self, nixpkgs, ... }:
     let
+      nixpkgsConfig = import ./lib/nixpkgs-config.nix { lib = nixpkgs.lib; };
+
       # Systems the convenience `packages.default` buildEnv is offered for.
       systems = [
         "x86_64-linux"
@@ -63,8 +65,14 @@
       packages = forAllSystems (
         system:
         let
-          pkgs = import nixpkgs { inherit system; };
-          pkgsUnstable = import inputs.nixpkgs-unstable { inherit system; };
+          pkgs = import nixpkgs {
+            inherit system;
+            config = nixpkgsConfig;
+          };
+          pkgsUnstable = import inputs.nixpkgs-unstable {
+            inherit system;
+            config = nixpkgsConfig;
+          };
         in
         {
           default = pkgs.buildEnv {
