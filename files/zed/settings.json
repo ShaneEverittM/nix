@@ -8,6 +8,8 @@
 // from the command palette or from `Zed` application menu.
 {
   // Window, layout, and panels
+  "use_system_path_prompts": false,
+  "restore_on_startup": "last_session",
   "agent_servers": {
     "claude-acp": {
       "default_config_options": {
@@ -72,6 +74,7 @@
   // AI, agents, and edit predictions
   "disable_ai": false,
   "agent": {
+    "max_content_width": 2050,
     "thinking_display": "always_collapsed",
     "tool_permissions": {
       "default": "allow",
