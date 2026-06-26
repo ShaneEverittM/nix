@@ -4,4 +4,6 @@
 pkgs: with pkgs; [
   # Polyglot runtime version manager (activated in modules/home/shell.nix).
   mise
+  # The Atlassian CLI.
+  acli
 ]
