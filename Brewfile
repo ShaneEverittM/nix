@@ -5,6 +5,7 @@
 cask_args appdir: "~/Applications"
 
 cask "visual-studio-code"
+cask "warp"
 cask "zed"
 cask "swift-shift"
 cask "jetbrains-toolbox"

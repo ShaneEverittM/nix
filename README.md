@@ -116,22 +116,11 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
 
 ## Notes for macOS
 
-The source-built `warp` fork input compiles Metal shaders, so it needs host Xcode
-tooling that Nix can't provide. The base Command Line Tools are **not** enough: since
-Xcode 16 / macOS Sequoia the Metal compiler ships as a separate downloadable component,
-and the `xcodebuild -downloadComponent` mechanism only exists in **full Xcode** (the CLT
-has no `xcodebuild`). Install full Xcode, then:
-
-```bash
-# Accept the license
-sudo xcodebuild -license accept
-
-# Download the component
-xcodebuild -downloadComponent MetalToolchain
-```
-
-Verify the Metal toolchain is present with `xcrun -f metal`. Only needed when a host
-sets `programs.warp.packageSource = "local-oss"`.
+Warp is installed via Homebrew (`cask "warp"` in the `Brewfile`), not Nix. Home Manager
+only manages Warp's config — settings, themes, and keybindings under `~/.warp`
+(`modules/home/warp.nix`). The `programs.warp.packageSource` option still lets a
+downstream consumer install a Warp build through Nix (e.g. `"stable"` or a source-built
+`"local-oss"` fork), but the public hosts here leave it at the default `"none"`.
 
 ## WSL Notes
 

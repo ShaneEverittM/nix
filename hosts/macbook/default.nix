@@ -17,16 +17,8 @@ in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
 
-  # Feed the warp.nix module its package options. local-oss is Shane's source-built
-  # Warp fork (inputs.warp); stable is the nixpkgs binary. Only the source selected
-  # by programs.warp.packageSource below is ever realized (lazy), and only on the Mac.
   extraSpecialArgs = {
     inherit pkgsUnstable;
-
-    warpPackages = {
-      local-oss = inputs.warp.packages.${system}.warp-terminal-experimental;
-      stable = pkgs.warp-terminal;
-    };
   };
 
   modules = [
@@ -45,8 +37,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
       publicHome.git.signingKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3";
       publicHome.git.sshSigningProgram = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign";
 
-      # Install the OSS Warp build from the fork.
-      programs.warp.packageSource = "local-oss";
+      # Warp itself is installed via Homebrew (Brewfile cask); Nix only manages its
+      # config (settings/themes/keybindings under ~/.warp via modules/home/warp.nix).
     }
   ];
 }
