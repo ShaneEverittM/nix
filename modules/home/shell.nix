@@ -1,7 +1,12 @@
 # zsh + ergonomics, shared by every host. Aliases lean on tools from
 # lib/packages.nix (eza/bat) and zoxide. On WSL, zsh is also set as the login shell
 # in modules/nixos/wsl.nix; macOS already defaults to zsh.
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # Auto-Warpify hook: emit the SourcedRcFileForWarp control sequence on every
@@ -45,6 +50,11 @@ in
         if command -v mise >/dev/null 2>&1; then
           eval "$(mise activate zsh)"
         fi
+        # macOS only: 1Password's native SSH agent. WSL gets its SSH_AUTH_SOCK
+        # from the agent relay in ssh-agent.nix (mkOrder 1500) instead.
+        ${lib.optionalString pkgs.stdenv.isDarwin ''
+          export SSH_AUTH_SOCK="${config.home.homeDirectory}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+        ''}
       ''
       # zoxide must initialize last — after mise's chpwd hook — or it warns that
       # its hook may be shadowed. mkOrder 2000 puts it after every other init
