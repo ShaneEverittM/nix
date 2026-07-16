@@ -32,6 +32,7 @@ pkgs: with pkgs; [
   btop # system monitor
   p7zip
   gh
+  nodejs
 
   # Languages / runtimes (rustup -> rust.nix, bun -> bun.nix, mise -> unstable-packages.nix)
   uv # Python package/runtime manager
