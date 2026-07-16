@@ -32,6 +32,17 @@
     "context": "(VimControl && !menu)",
     "bindings": {
       "space space": "pane::GoBack",
+      // Override the default `pane::DeploySearch` (project search) with the
+      // newer text finder picker.
+      "g /": "text_finder::Toggle",
+    },
+  },
+  {
+    // The default vim keymap also binds `g /` to project search outside
+    // editors (panels, etc.); override that too.
+    "context": "!Editor && !Terminal",
+    "bindings": {
+      "g /": "text_finder::Toggle",
     },
   },
   {
@@ -49,25 +60,25 @@
   {
     "context": "(Editor && mode == full)",
     "bindings": {
-      "cmd-e": null
-    }
+      "cmd-e": null,
+    },
   },
   {
     "context": "Workspace",
     "bindings": {
-      "cmd-e": null
-    }
+      "cmd-e": null,
+    },
   },
   {
     "context": "(((((Dock || Workspace) || OutlinePanel) || ProjectPanel) || CollabPanel) || (Editor && mode == auto_height))",
     "bindings": {
-      "cmd-e": "editor::ToggleFocus"
-    }
+      "cmd-e": "editor::ToggleFocus",
+    },
   },
   {
     "context": "(OutlinePanel && not_editing)",
     "bindings": {
-      "cmd-e": "editor::ToggleFocus"
-    }
-  }
+      "cmd-e": "editor::ToggleFocus",
+    },
+  },
 ]
