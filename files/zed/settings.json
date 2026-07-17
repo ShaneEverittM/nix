@@ -64,6 +64,10 @@
   "agent_buffer_font_size": 20,
   "agent_ui_font_size": 24,
   "git_commit_buffer_font_size": 20,
+  "markdown_preview_font_size": 24,
+  "markdown_preview": {
+    "max_width": 2050,
+  },
 
   // Editor behavior
   "auto_signature_help": false,
