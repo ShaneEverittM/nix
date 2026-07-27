@@ -23,6 +23,10 @@
   fonts.fontconfig.enable = true;
 
   home.packages = [
-    pkgs.nerd-fonts.jetbrains-mono
+    # Must be the plain family, NOT nerd-fonts.jetbrains-mono: the Nerd Font build
+    # registers its families as "JetBrainsMono Nerd Font" (no space, plus the suffix),
+    # so an app asking for literal "JetBrains Mono" — as the shared Warp profile does —
+    # finds nothing and silently falls back.
+    pkgs.jetbrains-mono
   ];
 }

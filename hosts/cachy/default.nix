@@ -46,13 +46,32 @@ inputs.home-manager.lib.homeManagerConfiguration {
       # sshAuthSock already defaults to the ~/.1password/agent.sock it creates.
       publicHome.onepassword.sshAgent = true;
 
+      # Dual-GPU box: displays hang off the NVIDIA card, but both GPUs expose Vulkan and
+      # wgpu ranks the AMD iGPU first. An app that picks the iGPU then can't present to
+      # a Wayland surface owned by the NVIDIA-driven output — the queue family doesn't
+      # support it — and dies with ERROR_SURFACE_LOST_KHR. (Warp did exactly this until
+      # force_x11 was turned off; XWayland had been hiding it.) Pin the Vulkan loader to
+      # the NVIDIA ICD.
+      #
+      # systemd.user.sessionVariables, not home.sessionVariables: the broken case is
+      # launching from the KDE launcher, which never sources hm-session-vars.sh. This
+      # lands in ~/.config/environment.d instead, which the graphical session does read
+      # (and which shells started from that session inherit). Takes effect on next login.
+      #
+      # NOTE: session-wide, so this pins *every* Vulkan app to the NVIDIA card. If
+      # something should render on the iGPU instead, scope this to Warp via a
+      # desktop-entry override rather than widening the exception here.
+      systemd.user.sessionVariables.VK_DRIVER_FILES = "/usr/share/vulkan/icd.d/nvidia_icd.json";
+
       # Warp is installed from the distro; Nix manages only its config, under the XDG
       # paths Warp uses on Linux (see modules/home/warp.nix).
       programs.warp.settings = {
-        # Warp renders through XWayland here; the native Wayland path is not reliable
-        # on this KDE/Wayland session. Linux-only, so it stays a host override rather
-        # than going into the shared profile.
-        system.force_x11 = true;
+        # Native Wayland, not XWayland. Kept explicit (rather than just omitted) because
+        # this was true until the VK_DRIVER_FILES pin above: without it Warp picked the
+        # iGPU, failed to present, and force_x11 was the only way to get a window at all.
+        # Linux-only, so it stays a host override rather than going into the shared
+        # profile.
+        system.force_x11 = false;
 
         # Less transparent than the Macs' 70: KDE's compositor blurs differently, so
         # the shared value washes out text here. Deep-merged over the shared
