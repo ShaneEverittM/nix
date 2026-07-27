@@ -8,7 +8,12 @@ This is a public, platform-agnostic Nix flake for Shane's personal machines:
 
 - `nixosConfigurations.nixos`: NixOS-on-WSL system for user `shane`.
 - `homeConfigurations."shane@macbook"` and `homeConfigurations.shane`: standalone home-manager for a personal macOS machine.
+- `homeConfigurations."shane@exodus"`: standalone home-manager for a CachyOS (Arch) desktop. Non-NixOS — the distro owns the system, Determinate Nix supplies the daemon.
 - `homeModules.*` and `nixosModules.*`: reusable public modules consumed by a separate private work-Mac repo.
+
+"Linux" in this repo means **any** Linux host. WSL-specific things go in the `wsl`
+modules, not the `linux` ones; non-NixOS distro workarounds go in `generic-linux.nix`,
+which must never reach the NixOS WSL host.
 
 Keep this repo safe to publish. Do not add secrets, work-internal settings, tokens, private hostnames, private registry URLs, or encrypted secret files.
 
@@ -19,15 +24,20 @@ Keep this repo safe to publish. Do not add secrets, work-internal settings, toke
 | `flake.nix` | Inputs and public outputs: WSL system, Mac home configs, reusable modules, default package env. |
 | `hosts/wsl/default.nix` | WSL host assembly and public per-host values. Imports NixOS + home-manager layers. |
 | `hosts/macbook/default.nix` | Personal Mac standalone home-manager assembly. No nix-darwin. |
+| `hosts/cachy/default.nix` | CachyOS desktop (`exodus`) standalone home-manager assembly. Non-NixOS. |
 | `modules/home/default.nix` | Universal home-manager core bundle. |
 | `modules/home/common.nix` | Owns the `publicHome.*` option namespace and shared cross-host config. |
 | `modules/home/{git,shell,rust,bun}.nix` | Shared home-manager behavior imported everywhere. |
-| `modules/home/linux.nix` | Linux/WSL-only home-manager layer. |
-| `modules/home/darwin.nix` | macOS-only home-manager bundle for GUI/terminal config. |
-| `modules/home/{vscode,zed,warp,jetbrains}.nix` | macOS dotfile/app modules. |
-| `modules/home/warp-settings.nix` | Shared Warp settings attr schema used by macOS and WSL seeders. |
+| `modules/home/onepassword.nix` | `SSH_AUTH_SOCK` for the 1Password agent; per-platform socket path. |
+| `modules/home/linux.nix` | Shared Linux layer (WSL + native Linux). No Windows bits. |
+| `modules/home/wsl.nix` | WSL-only layer. Imports `linux.nix`, `ssh-agent.nix`, `warp-wsl.nix`. |
+| `modules/home/generic-linux.nix` | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS. |
+| `modules/home/desktop.nix` | Cross-platform GUI dotfile bundle (vscode + zed + warp + jetbrains). |
+| `modules/home/darwin.nix` | macOS-only layer. Imports `desktop.nix`. |
+| `modules/home/{vscode,zed,warp,jetbrains}.nix` | Cross-platform dotfile/app modules; each resolves its own per-OS paths. |
+| `modules/home/warp-settings.nix` | Shared Warp settings attr schema used by all three Warp consumers. |
 | `modules/home/warp-wsl.nix` | WSL activation step that copies generated Warp config to Windows paths. |
-| `modules/home/ssh-agent.nix` | WSL 1Password SSH agent relay. |
+| `modules/home/ssh-agent.nix` | WSL 1Password SSH agent relay (populates the socket `onepassword.nix` points at). |
 | `modules/nixos/*.nix` | NixOS-only system modules for WSL. |
 | `lib/packages.nix` | Stable, platform-agnostic shared CLI package list. |
 | `lib/unstable-packages.nix` | Small platform-agnostic package lane from `nixpkgs-unstable`. |
@@ -60,8 +70,11 @@ The `README.md` has the detailed human-facing explanation. Use this file for qui
 | Add host identity/path/value | the relevant `hosts/*/default.nix` via `publicHome.*` |
 | Add reusable per-host option | `modules/home/common.nix` or the owning module's `options.publicHome.*` |
 | Add WSL system behavior | `modules/nixos/wsl.nix` or `modules/nixos/common.nix` |
-| Add WSL home behavior | `modules/home/linux.nix` or an imported WSL-only module |
-| Add macOS GUI/dotfile behavior | `modules/home/darwin.nix` plus `vscode.nix`, `warp.nix`, or `jetbrains.nix` |
+| Add WSL home behavior | `modules/home/wsl.nix` or an imported WSL-only module |
+| Add behavior for every Linux host | `modules/home/linux.nix` |
+| Add a non-NixOS distro workaround | `modules/home/generic-linux.nix` |
+| Add GUI/dotfile behavior for any desktop | `modules/home/desktop.nix` plus `vscode.nix`, `zed.nix`, `warp.nix`, or `jetbrains.nix` |
+| Add macOS-only behavior | `modules/home/darwin.nix` |
 | Change shared Warp settings | `modules/home/warp-settings.nix` |
 | Change source dotfiles | `files/` |
 | Change CI eval | `.github/workflows/eval.yml` |
@@ -80,6 +93,7 @@ nix flake check --all-systems --no-build --no-write-lock-file --show-trace
 # Optional targeted host evaluations.
 nix eval .#nixosConfigurations.nixos.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#homeConfigurations."shane@macbook".activationPackage.drvPath --no-write-lock-file
+nix eval .#homeConfigurations."shane@exodus".activationPackage.drvPath --no-write-lock-file
 ```
 
 Notes:

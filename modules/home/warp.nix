@@ -1,7 +1,18 @@
-# Warp terminal settings, keybindings, and themes (mirrored
-# to both the stable `.warp` and OSS `.warp-oss` profile dirs). Mac-only (bundled via
-# darwin.nix). The optional packageSource installs a Warp build through Home Manager;
-# leave it "none" unless a `warpPackages` arg is supplied by the consumer.
+# Warp terminal settings, keybindings, and themes. Cross-platform (bundled via
+# ./desktop.nix): Warp's config layout differs per OS, but the settings *schema* does
+# not, so all platforms share one profile from ./warp-settings.nix.
+#
+#   macOS   settings ~/.warp/settings.toml          themes ~/.warp/themes
+#           (mirrored to the OSS profile dir ~/.warp-oss/* as well)
+#   Linux   settings ~/.config/warp-terminal/settings.toml
+#           themes   ~/.local/share/warp-terminal/themes
+#
+# WSL is NOT covered here — Warp there is a Windows app that can't follow store
+# symlinks; see ./warp-wsl.nix, the third consumer of the shared settings schema.
+#
+# The optional packageSource installs a Warp build through Home Manager; leave it "none"
+# unless a `warpPackages` arg is supplied by the consumer. On the public hosts Warp comes
+# from Homebrew (macOS) or the distro (Linux), and Nix owns only its config.
 {
   config,
   lib,
@@ -21,14 +32,65 @@ let
     else
       publicRoot + "/${path}";
   mkSettings = import ./warp-settings.nix { inherit lib; };
-  # macOS keeps custom themes under each profile dir; theme paths are baked into
-  # the generated settings.toml so Warp can resolve them.
-  settingsFor =
-    profileDir:
-    mkSettings {
-      themeDir = "${config.publicHome.homeDirectory}/${profileDir}/themes";
-      overrides = cfg.settings;
-    };
+
+  themeNames = [
+    "jetbrains-ide-dark"
+    "jetbrains-ide-light"
+  ];
+
+  # One entry per config tree Warp reads on this OS. `name` only names the generated
+  # store path; the three dirs are home-relative.
+  profiles =
+    if pkgs.stdenv.isDarwin then
+      [
+        {
+          name = "stable";
+          configDir = ".warp";
+          themeDir = ".warp/themes";
+        }
+        {
+          name = "oss";
+          configDir = ".warp-oss";
+          themeDir = ".warp-oss/themes";
+        }
+      ]
+    else
+      [
+        {
+          name = "linux";
+          configDir = ".config/warp-terminal";
+          themeDir = ".local/share/warp-terminal/themes";
+        }
+      ];
+
+  # Theme paths are baked into settings.toml (Warp resolves them itself, so they must be
+  # absolute and profile-local), which is why settings are generated per profile rather
+  # than once and reused.
+  profileFiles =
+    profile:
+    {
+      "${profile.configDir}/settings.toml" = {
+        source = warpToml.generate "warp-${profile.name}-settings.toml" (mkSettings {
+          themeDir = "${config.publicHome.homeDirectory}/${profile.themeDir}";
+          overrides = cfg.settings;
+        });
+        force = true;
+      };
+
+      "${profile.configDir}/keybindings.yaml" = {
+        source = sourceFile "files/warp/keybindings.yaml";
+        force = true;
+      };
+    }
+    // lib.listToAttrs (
+      map (
+        theme:
+        lib.nameValuePair "${profile.themeDir}/${theme}.yaml" {
+          source = sourceFile "files/warp/themes/${theme}.yaml";
+          force = true;
+        }
+      ) themeNames
+    );
 in
 {
   options.programs.warp = {
@@ -66,46 +128,6 @@ in
       '';
     };
 
-    home.file = {
-      ".warp/settings.toml" = {
-        source = warpToml.generate "warp-settings.toml" (settingsFor ".warp");
-        force = true;
-      };
-
-      ".warp/keybindings.yaml" = {
-        source = sourceFile "files/warp/keybindings.yaml";
-        force = true;
-      };
-
-      ".warp-oss/settings.toml" = {
-        source = warpToml.generate "warp-oss-settings.toml" (settingsFor ".warp-oss");
-        force = true;
-      };
-
-      ".warp-oss/keybindings.yaml" = {
-        source = sourceFile "files/warp/keybindings.yaml";
-        force = true;
-      };
-
-      ".warp/themes/jetbrains-ide-dark.yaml" = {
-        source = sourceFile "files/warp/themes/jetbrains-ide-dark.yaml";
-        force = true;
-      };
-
-      ".warp/themes/jetbrains-ide-light.yaml" = {
-        source = sourceFile "files/warp/themes/jetbrains-ide-light.yaml";
-        force = true;
-      };
-
-      ".warp-oss/themes/jetbrains-ide-dark.yaml" = {
-        source = sourceFile "files/warp/themes/jetbrains-ide-dark.yaml";
-        force = true;
-      };
-
-      ".warp-oss/themes/jetbrains-ide-light.yaml" = {
-        source = sourceFile "files/warp/themes/jetbrains-ide-light.yaml";
-        force = true;
-      };
-    };
+    home.file = lib.mkMerge (map profileFiles profiles);
   };
 }

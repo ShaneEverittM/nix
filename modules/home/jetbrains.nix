@@ -1,5 +1,5 @@
-# JetBrains IDE vim bindings. Mac-only (bundled via darwin.nix) — the IDEs run on
-# macOS.
+# JetBrains IDE vim bindings. Cross-platform (bundled via desktop.nix) — ~/.ideavimrc is
+# where every JetBrains IDE looks on both macOS and Linux.
 {
   home.file = {
     ".ideavimrc".source = ../../files/ideavimrc;

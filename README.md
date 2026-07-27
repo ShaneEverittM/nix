@@ -3,8 +3,10 @@
 Public, multiplatform Nix configuration. It is a shared home-manager layer plus per-host
 assemblies for
 
-- a **NixOS-on-WSL** system (user `shane`, host `nixos`), and
-- a **personal macOS** machine (standalone home-manager, no nix-darwin)
+- a **NixOS-on-WSL** system (user `shane`, host `nixos`),
+- a **personal macOS** machine (standalone home-manager, no nix-darwin), and
+- a **CachyOS (Arch) desktop** (host `exodus`; standalone home-manager on a non-NixOS
+  distro, with Determinate Nix supplying the daemon)
 
 It is also designed to be consumed by private consumers, like at work
 [Downstream: the private work repo](#downstream-the-private-work-repo).
@@ -25,23 +27,37 @@ It is also designed to be consumed by private consumers, like at work
 | `modules/home/shell.nix`                       | zsh + zoxide, eza/bat aliases, uv/mise activation.                   |
 | `modules/home/rust.nix`                        | rustup + cargo (sanitized cross-compile config).                     |
 | `modules/home/bun.nix`                         | bun runtime + global @types/bun.                                     |
-| `modules/home/linux.nix`                       | linux-only: WSL VS Code PATH, ssh-agent, warp-wsl.                   |
-| `modules/home/darwin.nix`                      | mac-only: vscode + zed + warp + jetbrains.                           |
-| `modules/home/{vscode,zed,warp,jetbrains}.nix` | GUI/terminal dotfiles (out-of-store symlinks).                       |
-| `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + WSL).                           |
+| `modules/home/onepassword.nix`                 | SSH_AUTH_SOCK for the 1Password agent (per-platform path).           |
+| `modules/home/linux.nix`                       | shared Linux layer (WSL + native Linux).                             |
+| `modules/home/wsl.nix`                         | WSL-only: Windows VS Code PATH, ssh-agent, warp-wsl.                 |
+| `modules/home/generic-linux.nix`               | non-NixOS distro fixups: XDG dirs, locale, fontconfig.               |
+| `modules/home/desktop.nix`                     | cross-platform GUI bundle: vscode + zed + warp + jetbrains.          |
+| `modules/home/darwin.nix`                      | mac-only layer (imports desktop).                                    |
+| `modules/home/{vscode,zed,warp,jetbrains}.nix` | GUI/terminal dotfiles (out-of-store symlinks), per-OS paths.         |
+| `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + Linux + WSL).                   |
 | `modules/home/warp-wsl.nix`                    | WSL-only: seeds the Windows-side Warp install.                       |
 | `modules/nixos/`                               | NixOS system modules (WSL host only).                                |
 | `modules/nixos/common.nix`                     | flakes, system git, nixPath pin, stateVersion.                       |
 | `modules/nixos/wsl.nix`                        | wsl.\*, openssh, user shane, nix-ld, zsh login shell.                |
-| `hosts/wsl/default.nix`                        | nixosConfigurations.nixos (nixos + home linux).                      |
+| `hosts/wsl/default.nix`                        | nixosConfigurations.nixos (nixos + home wsl).                        |
 | `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                    |
+| `hosts/cachy/default.nix`                      | homeConfigurations."shane@exodus" (linux + genericLinux + desktop).  |
 
 Why this shape: home-manager is the one layer every host shares, so the `modules/home/*`
 are the real reuse atom; only WSL has a system (NixOS) layer. Neither Mac uses
-nix-darwin (the work Mac can't — MDM owns the system; the personal Mac doesn't need it).
+nix-darwin (the work Mac can't — MDM owns the system; the personal Mac doesn't need it),
+and CachyOS can't either — Arch owns the system there, so home-manager _is_ the config.
 Platform splits happen by **which modules a host imports**, not by `mkIf` — `mkIf`
 guards values, not option existence (`wsl.enable` can't be referenced in a Darwin eval
 at all).
+
+The Linux side splits three ways, and the distinction matters: `linux.nix` is what every
+Linux host shares, `wsl.nix` holds everything that assumes a Windows side exists (the
+agent relay, the Windows Warp seeder, the Windows VS Code launcher), and
+`generic-linux.nix` holds the non-NixOS distro fixups that would be actively wrong on
+NixOS. Orthogonally, `desktop.nix` carries the GUI dotfiles for any machine with a
+graphical session — macOS and CachyOS share it; WSL does not, because the GUI apps there
+run on the Windows side.
 
 The shared modules are **option-driven**: behavior lives in the module, per-machine
 values come from the `publicHome.*` options a host sets — `username` (derives
@@ -54,7 +70,9 @@ Nix attrsets, so downstream consumers can overlay Cargo and Warp settings withou
 templates or appended TOML strings. This is what lets the public modules carry no
 identity/secrets: each host — and the private work repo — supplies its own. The
 interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
-shell is set declaratively in `modules/nixos/wsl.nix`. Everything is pinned to the
+shell is set declaratively in `modules/nixos/wsl.nix`. On CachyOS the distro owns
+`/etc/passwd`, so that one takes a one-time `chsh` (see [CachyOS
+Notes](#cachyos-notes)). Everything is pinned to the
 **nixos-25.11** release across the baseline inputs, with a single stable `nixpkgs`
 (`follows` threaded through the main inputs). A separate `nixpkgs-unstable` input is
 used only for the small cross-host package lane in `lib/unstable-packages.nix`, for
@@ -76,11 +94,14 @@ symlink, and GitHub Copilot gets a short entrypoint through
 nh os switch
 ```
 
-**Mac:**
+**Mac and CachyOS:**
 
 ```bash
 nh home switch
 ```
+
+`nh` auto-detects `<user>@<hostname>`, so this resolves to `shane@exodus` on the CachyOS
+box and falls back to the `shane` alias on the Mac.
 
 Edit the layer that fits the change, then rebuild. The flake is read from the git tree,
 so **new files must be `git add`-ed** before a rebuild/switch will see them.
@@ -117,10 +138,45 @@ The work Mac lives in a separate **private** repo (e.g. `nix-work`) that:
 ## Notes for macOS
 
 Warp is installed via Homebrew (`cask "warp"` in the `Brewfile`), not Nix. Home Manager
-only manages Warp's config — settings, themes, and keybindings under `~/.warp`
-(`modules/home/warp.nix`). The `programs.warp.packageSource` option still lets a
+only manages Warp's config — settings, themes, and keybindings under `~/.warp` and the
+OSS profile's `~/.warp-oss` (`modules/home/warp.nix`; Linux uses XDG paths instead, and
+the settings schema itself is shared). The `programs.warp.packageSource` option still lets a
 downstream consumer install a Warp build through Nix (e.g. `"stable"` or a source-built
 `"local-oss"` fork), but the public hosts here leave it at the default `"none"`.
+
+## CachyOS Notes
+
+`exodus` runs CachyOS (Arch) with Determinate Nix installed alongside it. Arch owns the
+system; home-manager owns `$HOME`. GUI apps come from the distro (Warp, Zed, 1Password)
+and Nix manages only their config — same division of labour as the Mac's Homebrew.
+
+`modules/home/generic-linux.nix` carries the non-NixOS fixups and must **not** be
+imported on a NixOS host: `targets.genericLinux.enable` extends `XDG_DATA_DIRS` so
+Nix-installed `.desktop` entries appear in the KDE launcher, and sets `LOCALE_ARCHIVE` so
+Nix binaries stop warning against Arch's glibc. NixOS already handles both.
+
+One-time host setup (not Nix-managed):
+
+1. **Bootstrap home-manager**, which isn't installed yet on a fresh box:
+   ```bash
+   nix run home-manager/release-26.05 -- switch --flake ~/.config/nix#shane@exodus
+   ```
+   After that first switch, `nh home switch` works.
+2. **Make zsh the login shell** — home-manager writes `~/.zshrc` but can't touch
+   `/etc/passwd` on a foreign distro:
+   ```bash
+   chsh -s /usr/bin/zsh
+   ```
+3. **1Password → Settings → Developer:** enable _Use the SSH agent_. It creates
+   `~/.1password/agent.sock`, which is where `publicHome.onepassword.sshAgent` points
+   `SSH_AUTH_SOCK`. Commit signing goes through `/opt/1Password/op-ssh-sign`.
+
+Warp on Linux uses XDG paths rather than the Mac's `~/.warp` (`modules/home/warp.nix`
+holds the layout table), and the first switch **overwrites** the existing
+`~/.config/warp-terminal/settings.toml` with the shared profile — Warp rewrites that file
+on any UI toggle, so as on macOS this is a seed-on-switch, not a locked file. Linux-only
+deltas belong in the host's `programs.warp.settings` (currently just `system.force_x11`,
+for this KDE/Wayland session).
 
 ## WSL Notes
 
@@ -148,12 +204,26 @@ Caveat: Warp **rewrites `settings.toml` at runtime** (any UI toggle), so this is
 seed-on-switch, not a locked file — the same trade-off the macOS module accepts except
 without the symlink showing changes in this repo.
 
-## 1Password SSH agent (WSL)
+## 1Password SSH agent
 
-The module `modules/home/ssh-agent.nix` bridges the Windows 1Password SSH agent (a named
-pipe) to a Unix socket in WSL, so `ssh`/`git` here authenticate with keys that never
-leave 1Password. Enabled in the WSL host via `publicHome.onepassword.sshAgentRelay`. The
-Nix side (socat, `SSH_AUTH_SOCK`, the lazy relay started from zsh) is automatic; these
+All three hosts authenticate `ssh`/`git` against the 1Password agent, and all three sign
+commits with the same key — only the paths differ, so they are typed options rather than
+conditionals in the shell config. `modules/home/onepassword.nix` owns
+`publicHome.onepassword.sshAuthSock` (defaulting per platform) and exports
+`SSH_AUTH_SOCK`; `publicHome.git.sshSigningProgram` names the signer:
+
+| Host   | Agent socket                       | Signer                              |
+| ------ | ---------------------------------- | ----------------------------------- |
+| macOS  | `~/Library/Group Containers/...`   | `/Applications/1Password.app/...`   |
+| Linux  | `~/.1password/agent.sock` (native) | `/opt/1Password/op-ssh-sign`        |
+| WSL    | `~/.1password/agent.sock` (relay)  | none — `ssh-keygen` + relayed agent |
+
+### The WSL relay
+
+WSL has no native agent, so `modules/home/ssh-agent.nix` bridges the Windows 1Password
+SSH agent (a named pipe) to a Unix socket at that same Linux path, so keys never leave
+1Password. Enabled in the WSL host via `publicHome.onepassword.sshAgentRelay`, which
+implies `sshAgent`. The Nix side (socat, `SSH_AUTH_SOCK`, the lazy relay started from zsh) is automatic; these
 **Windows-side** steps are manual (not Nix-managed):
 
 1. **1Password for Windows → Settings → Developer:** enable _Use the SSH agent_ (and

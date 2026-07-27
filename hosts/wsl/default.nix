@@ -29,7 +29,7 @@ inputs.nixpkgs.lib.nixosSystem {
       home-manager.users.shane = {
         imports = [
           ../../modules/home # core bundle (common + git + shell + rust + bun)
-          ../../modules/home/linux.nix
+          ../../modules/home/wsl.nix # WSL layer; imports the shared linux.nix itself
         ];
         # Personal git identity (already public). The work Mac sets its own in the
         # private nix-work repo.

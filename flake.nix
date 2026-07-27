@@ -33,8 +33,9 @@
         system = "x86_64-linux";
       };
 
-      # Personal MacBook Air — `nh home switch`.
-      # Evaluable anywhere, buildable only on a Darwin builder.
+      # Standalone home-manager hosts (no nix-darwin, no NixOS): the personal Mac and
+      # the CachyOS desktop. The Mac config is evaluable anywhere but buildable only on
+      # a Darwin builder.
       homeConfigurations =
         let
           macbook = import ./hosts/macbook/default.nix {
@@ -45,9 +46,18 @@
         {
           "shane@macbook" = macbook;
 
+          # CachyOS (Arch) desktop, hostname `exodus`. Non-NixOS, so home-manager is
+          # the whole config; Determinate Nix supplies the daemon.
+          "shane@exodus" = import ./hosts/cachy/default.nix {
+            inherit inputs;
+            system = "x86_64-linux";
+          };
+
           # nh home auto-detects <username>@<hostname>, then <username>. Keep
           # this alias so the public Mac can use the short nh home commands even
-          # when its hostname is not literally "macbook".
+          # when its hostname is not literally "macbook". The Linux host is matched
+          # by its exact <username>@<hostname> above, so it never reaches this
+          # Darwin-only fallback.
           shane = macbook;
         };
 
@@ -80,8 +90,11 @@
       # configuration.
       homeModules = {
         default = import ./modules/home; # core bundle (common + git + shell + rust + bun)
-        linux = import ./modules/home/linux.nix; # WSL extras
-        darwin = import ./modules/home/darwin.nix; # Mac GUI bundle (vscode + zed + warp + jetbrains)
+        linux = import ./modules/home/linux.nix; # shared Linux layer
+        wsl = import ./modules/home/wsl.nix; # WSL extras (pulls in linux)
+        genericLinux = import ./modules/home/generic-linux.nix; # non-NixOS distro fixups
+        darwin = import ./modules/home/darwin.nix; # Mac layer (pulls in desktop)
+        desktop = import ./modules/home/desktop.nix; # GUI bundle (vscode + zed + warp + jetbrains)
 
         # Individual modules, for finer-grained downstream composition.
         common = import ./modules/home/common.nix;
@@ -89,6 +102,7 @@
         shell = import ./modules/home/shell.nix;
         rust = import ./modules/home/rust.nix;
         bun = import ./modules/home/bun.nix;
+        onepassword = import ./modules/home/onepassword.nix;
         vscode = import ./modules/home/vscode.nix;
         zed = import ./modules/home/zed.nix;
         warp = import ./modules/home/warp.nix;

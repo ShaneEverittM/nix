@@ -1,6 +1,6 @@
 # Zed settings/keymap as out-of-store symlinks, so they stay live-editable in the
-# checked-out repo. Mac-only for now (bundled via darwin.nix): this repo does not
-# currently model a Linux desktop Zed install.
+# checked-out repo. Cross-platform (bundled via desktop.nix): Zed reads ~/.config/zed on
+# both macOS and Linux, so no per-OS path split is needed here.
 { config, ... }:
 
 let
