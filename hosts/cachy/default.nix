@@ -53,6 +53,11 @@ inputs.home-manager.lib.homeManagerConfiguration {
         # on this KDE/Wayland session. Linux-only, so it stays a host override rather
         # than going into the shared profile.
         system.force_x11 = true;
+
+        # Less transparent than the Macs' 70: KDE's compositor blurs differently, so
+        # the shared value washes out text here. Deep-merged over the shared
+        # appearance.window block, so override_blur and zoom_level still come from it.
+        appearance.window.override_opacity = 90;
       };
     }
   ];
