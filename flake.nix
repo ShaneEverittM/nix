@@ -17,7 +17,7 @@
   outputs =
     inputs@{ self, nixpkgs, ... }:
     let
-      nixpkgsConfig = import ./lib/nixpkgs-config.nix { lib = nixpkgs.lib; };
+      nixpkgsConfig = import ./lib/nixpkgs-config.nix { inherit (nixpkgs) lib; };
 
       # Systems the convenience `packages.default` buildEnv is offered for.
       systems = [
@@ -112,5 +112,18 @@
         default = import ./modules/nixos/common.nix;
         wsl = import ./modules/nixos/wsl.nix;
       };
+
+      # CI gates as flake checks, so `nix flake check` runs the same lint + build
+      # coverage locally and in CI. See lib/checks.nix for the per-system split.
+      checks = import ./lib/checks.nix { inherit inputs self systems; };
+
+      # `nix fmt` formats the tree with the same tool the nixfmt check enforces.
+      formatter = forAllSystems (
+        system:
+        (import nixpkgs {
+          inherit system;
+          config = nixpkgsConfig;
+        }).nixfmt-rfc-style
+      );
     };
 }

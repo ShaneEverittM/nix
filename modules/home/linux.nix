@@ -5,8 +5,7 @@
 # Keep the Windows-facing bits out of here — those belong in ./wsl.nix — and keep the
 # non-NixOS distro workarounds out too, since NixOS hosts must not get them; those live
 # in ./generic-linux.nix.
-{ ... }:
-{
+_: {
   # Linux-wide packages/config shared by WSL and desktop Linux go here as they come up.
   # (homeDirectory is derived in common.nix from publicHome.username.)
 }
