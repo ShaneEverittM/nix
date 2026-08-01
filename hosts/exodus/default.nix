@@ -131,6 +131,7 @@ inputs.nixpkgs.lib.nixosSystem {
               vscode
               jetbrains.idea
               claude-code
+              discord
             ])
             ++ [
               warp-terminal-wayland # pkgsUnstable.warp-terminal + Wayland libs (see above)
