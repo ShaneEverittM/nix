@@ -139,6 +139,27 @@
     };
   };
 
+  # mDNS: advertise/resolve `*.local` on the LAN so this box answers to
+  # `exodus.local` without a static IP. nssmdns4 wires mDNS into nsswitch so it
+  # resolves other `.local` hosts too; openFirewall opens UDP 5353.
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+    publish = {
+      enable = true;
+      addresses = true;
+      workstation = true;
+    };
+  };
+
+  # Tailscale: stable MagicDNS name (`exodus`) + reachability from any tailnet
+  # device, LAN or remote, over WireGuard. Enabling installs tailscaled + the CLI;
+  # join the tailnet once with an interactive `tailscale up` (no key in this public
+  # repo). SSH already works over the tailnet since port 22 is open on all
+  # interfaces; scope it to the tailnet later if you want to drop LAN exposure.
+  services.tailscale.enable = true;
+
   # Install firefox.
   programs.firefox.enable = true;
 
