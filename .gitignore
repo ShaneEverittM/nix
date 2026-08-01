@@ -5,3 +5,9 @@ result-*
 # must never be committed to this public repo. Sort its contents into the
 # private nix-work repo, then delete. Gitignored => also invisible to the flake.
 migration/
+
+# Claude Code's isolated git worktrees (isolation: "worktree") — ephemeral,
+# machine-local checkouts. The worktree registration lives in .git/worktrees,
+# so ignoring the path here is safe. Scoped to worktrees/ so project-level
+# .claude config (settings.json, commands/) can still be committed if wanted.
+.claude/worktrees/
