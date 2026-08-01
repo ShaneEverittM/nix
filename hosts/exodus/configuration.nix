@@ -12,6 +12,8 @@
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
+    # Vault Hunters Minecraft server: native systemd user unit + host prereqs.
+    ./vaulthunters.nix
   ];
 
   # Personal desktop: allow the unfree apps this box runs (1Password, Warp, VS Code,
