@@ -1,0 +1,7 @@
+# statix lint config, consumed by the `statix` flake check (lib/checks.nix).
+#
+# repeated_keys: this repo intentionally uses the dotted-key style throughout
+# (e.g. `home-manager.useGlobalPkgs = true;`, `publicHome.git.userName = ...`), which
+# statix would rewrite into nested attrsets. That style is deliberate and more
+# readable here, so the lint is disabled rather than churning every host file.
+disabled = ["repeated_keys"]

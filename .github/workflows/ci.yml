@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # `nix flake check` builds the checks for the runner's own system, so we run it once
+    # per target platform: Linux builds the NixOS toplevels, macOS builds the Darwin
+    # home activations (incl. the downstream-consumer smoke test). Lint gates
+    # (nixfmt/deadnix/statix) run on both — cheap, and keeps a red X visible either way.
+    name: flake check (${{ matrix.system }})
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - system: x86_64-linux
+            runs-on: ubuntu-latest
+            free-disk: true
+          - system: aarch64-darwin
+            runs-on: macos-14
+            free-disk: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Building two full NixOS system closures (KDE desktop + WSL) can exhaust the
+      # ~14 GB free on a stock Linux runner; reclaim space before the Nix store fills.
+      - name: Free disk space
+        if: matrix.free-disk
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      # No --all-systems: each runner checks only its own system (the other platform is
+      # covered by the sibling matrix job), so cross-system builds are never attempted.
+      - name: Flake check
+        run: nix flake check -L --no-write-lock-file --show-trace
