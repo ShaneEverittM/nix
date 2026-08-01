@@ -123,7 +123,7 @@
         (import nixpkgs {
           inherit system;
           config = nixpkgsConfig;
-        }).nixfmt-rfc-style
+        }).nixfmt
       );
     };
 }

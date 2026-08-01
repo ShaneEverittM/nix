@@ -50,7 +50,7 @@ let
       pkgs = pkgsFor system;
     in
     {
-      nixfmt = pkgs.runCommandLocal "check-nixfmt" { nativeBuildInputs = [ pkgs.nixfmt-rfc-style ]; } ''
+      nixfmt = pkgs.runCommandLocal "check-nixfmt" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
         cd ${self}
         nixfmt --check $(find . -name '*.nix' -not -path '${generated}')
         touch $out
