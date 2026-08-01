@@ -23,6 +23,15 @@
 
 let
   cfg = config.publicHome.onepassword;
+
+  # Keep a live agent forwarded over SSH (ForwardAgent: SSH_CONNECTION set + the
+  # socket sshd created still present); otherwise point at this host's own
+  # 1Password socket.
+  preferForwardedAgent = ''
+    if [ -z "''${SSH_CONNECTION:-}" ] || [ ! -S "''${SSH_AUTH_SOCK:-}" ]; then
+      export SSH_AUTH_SOCK="${cfg.sshAuthSock}"
+    fi
+  '';
 in
 {
   options.publicHome.onepassword = {
@@ -48,6 +57,36 @@ in
   };
 
   config = lib.mkIf cfg.sshAgent {
-    home.sessionVariables.SSH_AUTH_SOCK = cfg.sshAuthSock;
+    # Deliberately not home.sessionVariables: that writes an unconditional
+    # `export SSH_AUTH_SOCK=…` into .zshenv, which runs on every shell and
+    # overwrites the socket sshd forwards into an `ssh -A` session (leaving remote
+    # sessions pointed at a local 1Password agent that isn't running headless). So
+    # set it conditionally instead, covering the same shells home.sessionVariables
+    # did — zsh's .zshenv (envExtra) and bash's .profile/.bash_profile
+    # (profileExtra) — to keep login/GUI coverage unchanged.
+    programs.zsh.envExtra = preferForwardedAgent;
+    programs.bash.profileExtra = preferForwardedAgent;
+
+    # IdentityAgent overrides SSH_AUTH_SOCK, so it needs the same forwarded-vs-local
+    # split as the shell logic above — otherwise ssh/git ignore a forwarded agent and
+    # get pinned to this host's 1Password socket (dead in a headless SSH session).
+    # The Match-exec block must sort before "*" (first value wins in ssh_config).
+    programs.ssh = {
+      enable = true;
+      # Don't inject home-manager's default Host * block; we only want the two
+      # IdentityAgent rules below, matching the prior hand-written config.
+      enableDefaultConfig = false;
+      settings = {
+        forwarded-agent = lib.hm.dag.entryBefore [ "default" ] {
+          header = ''Match exec "test -n \"$SSH_CONNECTION\""'';
+          IdentityAgent = "SSH_AUTH_SOCK";
+        };
+        default = {
+          header = "Host *";
+          # Quoted because the macOS socket path contains spaces.
+          IdentityAgent = ''"${cfg.sshAuthSock}"'';
+        };
+      };
+    };
   };
 }
