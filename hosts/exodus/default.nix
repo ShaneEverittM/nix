@@ -10,10 +10,11 @@
 
 let
   nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
-  # Unstable lane. Feeds both the shared fast-moving CLI tools (mise, acli) and this
-  # host's fast-moving desktop apps (Warp, Zed — see home.packages below). allowUnfree
-  # matches the system's stance in ./configuration.nix (Warp is unfree); the narrow
-  # shared predicate in lib/nixpkgs-config.nix only covers acli.
+  # Unstable lane. Feeds the shared fast-moving CLI tools (mise, acli) and Zed (see
+  # home.packages below). Warp no longer rides this lane — it's pinned to the upstream
+  # AppImage instead (see warp-terminal-appimage). allowUnfree matches the system's
+  # stance in ./configuration.nix; the narrow shared predicate in
+  # lib/nixpkgs-config.nix only covers acli.
   pkgsUnstable = import inputs.nixpkgs-unstable {
     inherit system;
     config = nixpkgsConfig // {
@@ -40,30 +41,55 @@ inputs.nixpkgs.lib.nixosSystem {
         {
           pkgs,
           pkgsUnstable,
-          lib,
           ...
         }:
         let
-          # Warp is a prebuilt binary whose windowing layer (winit) dlopens
-          # libwayland-client.so.0 (and libxkbcommon) at runtime. FHS distros expose
-          # those in /usr/lib; NixOS does not, and the upstream wrapper adds no library
-          # path — so native Wayland panics with WaylandError(NoWaylandLib), Warp falls
-          # back to XWayland, and shows a "crash during startup" banner. Wrap the package
-          # to put those libs on LD_LIBRARY_PATH. The .desktop uses `Exec=warp-terminal`
-          # (resolved via PATH), so installing this wrapped build in home.packages makes
-          # the KDE launcher use it too — no desktop-entry patching needed.
-          warp-terminal-wayland = pkgs.symlinkJoin {
-            name = "warp-terminal-wayland";
-            paths = [ pkgsUnstable.warp-terminal ];
-            nativeBuildInputs = [ pkgs.makeWrapper ];
-            postBuild = ''
-              wrapProgram $out/bin/warp-terminal \
-                --prefix LD_LIBRARY_PATH : ${
-                  lib.makeLibraryPath [
-                    pkgs.wayland
-                    pkgs.libxkbcommon
-                  ]
-                }
+          # Warp ships fast-moving releases and a store-installed build can't self-update
+          # (read-only store) — so instead of tracking nixpkgs we pin the upstream Linux
+          # AppImage directly and run it via appimageTools. To bump, resolve the current
+          # versioned URL and hash, then update warpVersion + src.hash below:
+          #   url=$(curl -sL -o /dev/null -w '%{url_effective}' \
+          #         'https://app.warp.dev/download?package=appimage')
+          #   nix-prefetch-url "$url" | xargs nix hash convert --hash-algo sha256
+          warpVersion = "0.2026.07.29.09.05.stable_02";
+          warpSrc = pkgs.fetchurl {
+            url = "https://releases.warp.dev/stable/v${warpVersion}/Warp-x86_64.AppImage";
+            hash = "sha256-wuyM3GcAG6vK/GU5MECVxHhcY7fXoXhZNE3jIltAVBE=";
+          };
+          # The bundled .desktop + icon tree, extracted so we can install them ourselves —
+          # wrapType2 wraps only the binary and ships no launcher entry or icon.
+          warpAppimageContents = pkgs.appimageTools.extractType2 {
+            pname = "warp-terminal";
+            version = warpVersion;
+            src = warpSrc;
+          };
+          # winit dlopens libwayland-client.so.0 (and libxkbcommon) at runtime. Where the
+          # old prebuilt-binary build needed an LD_LIBRARY_PATH wrap, appimageTools runs
+          # Warp inside an FHS env, so we just add those libs to it. Native Wayland still
+          # depends on the two runtime knobs set on the home config below
+          # (system.force_x11 = false and the VK_DRIVER_FILES NVIDIA pin); this only
+          # makes the Wayland libs loadable in the first place. The FHS env also
+          # ro-binds /run/opengl-driver, so the Vulkan ICD pin resolves inside it.
+          warp-terminal-appimage = pkgs.appimageTools.wrapType2 {
+            pname = "warp-terminal";
+            version = warpVersion;
+            src = warpSrc;
+
+            extraPkgs = _: [
+              pkgs.wayland
+              pkgs.libxkbcommon
+            ];
+
+            # wrapType2 names the binary $out/bin/warp-terminal (= pname), preserving the
+            # `Exec=warp-terminal` PATH contract the KDE launcher relies on. The bundled
+            # entry ships `Exec=warp %U`, so rewrite it to match; --replace-fail makes a
+            # version bump that changes this line fail loudly instead of silently.
+            extraInstallCommands = ''
+              install -Dm444 ${warpAppimageContents}/usr/share/applications/dev.warp.Warp.desktop \
+                -t $out/share/applications
+              cp -r ${warpAppimageContents}/usr/share/icons $out/share/icons
+              substituteInPlace $out/share/applications/dev.warp.Warp.desktop \
+                --replace-fail 'Exec=warp ' 'Exec=warp-terminal '
             '';
           };
         in
@@ -134,7 +160,7 @@ inputs.nixpkgs.lib.nixosSystem {
               discord
             ])
             ++ [
-              warp-terminal-wayland # pkgsUnstable.warp-terminal + Wayland libs (see above)
+              warp-terminal-appimage # pinned upstream AppImage via appimageTools (see above)
               pkgsUnstable.zed-editor
             ];
         };
