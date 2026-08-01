@@ -118,6 +118,25 @@
     packages = with pkgs; [
       kdePackages.kate
     ];
+    # SSH in with the 1Password-held key (same key as the WSL host and commit signing).
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
+    ];
+  };
+
+  # SSH access over the LAN (behind the home router this is reachable only from the
+  # local network unless port 22 is forwarded). Key-only, hardened like the WSL host.
+  services.openssh = {
+    enable = true;
+    openFirewall = true;
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "no";
+      AllowUsers = [ "shane" ];
+      MaxAuthTries = 3;
+      PerSourcePenalties = "crash:3600s authfail:3600s max:86400s";
+    };
   };
 
   # Install firefox.
