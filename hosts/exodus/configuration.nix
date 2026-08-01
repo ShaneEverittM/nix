@@ -3,7 +3,6 @@
 # is the system-only layer — hardware, desktop environment, users, and services.
 {
   config,
-  lib,
   pkgs,
   ...
 }:
