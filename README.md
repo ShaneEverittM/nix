@@ -4,9 +4,9 @@ Public, multiplatform Nix configuration. It is a shared home-manager layer plus 
 assemblies for
 
 - a **NixOS-on-WSL** system (user `shane`, host `nixos`),
-- a **personal macOS** machine (standalone home-manager, no nix-darwin), and
-- a **CachyOS (Arch) desktop** (host `exodus`; standalone home-manager on a non-NixOS
-  distro, with Determinate Nix supplying the daemon)
+- a **bare-metal NixOS desktop** (host `exodus`, KDE Plasma; home-manager folded in as a
+  NixOS module), and
+- a **personal macOS** machine (standalone home-manager, no nix-darwin)
 
 It is also designed to be consumed by private consumers, like at work
 [Downstream: the private work repo](#downstream-the-private-work-repo).
@@ -36,28 +36,31 @@ It is also designed to be consumed by private consumers, like at work
 | `modules/home/{vscode,zed,warp,jetbrains}.nix` | GUI/terminal dotfiles (out-of-store symlinks), per-OS paths.         |
 | `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + Linux + WSL).                   |
 | `modules/home/warp-wsl.nix`                    | WSL-only: seeds the Windows-side Warp install.                       |
-| `modules/nixos/`                               | NixOS system modules (WSL host only).                                |
-| `modules/nixos/common.nix`                     | flakes, system git, nixPath pin, stateVersion.                       |
-| `modules/nixos/wsl.nix`                        | wsl.\*, openssh, user shane, nix-ld, zsh login shell.                |
+| `modules/nixos/`                               | NixOS system modules (WSL + exodus).                                 |
+| `modules/nixos/common.nix`                     | flakes, system git, nixPath pin (shared by both NixOS hosts).        |
+| `modules/nixos/wsl.nix`                        | wsl.\*, openssh, user shane, nix-ld, zsh login shell, stateVersion.  |
 | `hosts/wsl/default.nix`                        | nixosConfigurations.nixos (nixos + home wsl).                        |
 | `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                    |
-| `hosts/cachy/default.nix`                      | homeConfigurations."shane@exodus" (linux + genericLinux + desktop).  |
+| `hosts/exodus/default.nix`                     | nixosConfigurations.exodus (nixos + home linux + desktop).           |
+| `hosts/exodus/configuration.nix`               | exodus system layer (KDE Plasma, PipeWire, users, unfree, zsh).      |
 
 Why this shape: home-manager is the one layer every host shares, so the `modules/home/*`
-are the real reuse atom; only WSL has a system (NixOS) layer. Neither Mac uses
-nix-darwin (the work Mac can't — MDM owns the system; the personal Mac doesn't need it),
-and CachyOS can't either — Arch owns the system there, so home-manager _is_ the config.
-Platform splits happen by **which modules a host imports**, not by `mkIf` — `mkIf`
-guards values, not option existence (`wsl.enable` can't be referenced in a Darwin eval
-at all).
+are the real reuse atom. The two Linux hosts (WSL and exodus) run NixOS and fold
+home-manager in as a system module (sharing `modules/nixos/common.nix`); the Mac is
+standalone home-manager with no nix-darwin (the work Mac can't — MDM owns the system; the
+personal Mac doesn't need it). Platform splits happen by **which modules a host imports**,
+not by `mkIf` — `mkIf` guards values, not option existence (`wsl.enable` can't be
+referenced in a Darwin eval at all).
 
 The Linux side splits three ways, and the distinction matters: `linux.nix` is what every
 Linux host shares, `wsl.nix` holds everything that assumes a Windows side exists (the
 agent relay, the Windows Warp seeder, the Windows VS Code launcher), and
 `generic-linux.nix` holds the non-NixOS distro fixups that would be actively wrong on
-NixOS. Orthogonally, `desktop.nix` carries the GUI dotfiles for any machine with a
-graphical session — macOS and CachyOS share it; WSL does not, because the GUI apps there
-run on the Windows side.
+NixOS. Both Linux hosts run NixOS today, so `generic-linux.nix` has no in-repo consumer —
+it stays exported via `homeModules.genericLinux` for downstream non-NixOS Linux.
+Orthogonally, `desktop.nix` carries the GUI dotfiles for any machine with a graphical
+session — macOS and exodus share it; WSL does not, because the GUI apps there run on the
+Windows side.
 
 The shared modules are **option-driven**: behavior lives in the module, per-machine
 values come from the `publicHome.*` options a host sets — `username` (derives
@@ -69,10 +72,9 @@ flake, or point to a local clone of this flake. Mergeable TOML config is generat
 Nix attrsets, so downstream consumers can overlay Cargo and Warp settings without text
 templates or appended TOML strings. This is what lets the public modules carry no
 identity/secrets: each host — and the private work repo — supplies its own. The
-interactive shell is **zsh everywhere**; macOS already defaults to it, and WSL's login
-shell is set declaratively in `modules/nixos/wsl.nix`. On CachyOS the distro owns
-`/etc/passwd`, so that one takes a one-time `chsh` (see [CachyOS
-Notes](#cachyos-notes)). Everything is pinned to the
+interactive shell is **zsh everywhere**; macOS already defaults to it, and the two NixOS
+hosts set shane's login shell declaratively (`modules/nixos/wsl.nix` for WSL,
+`hosts/exodus/configuration.nix` for exodus). Everything is pinned to the
 **nixos-25.11** release across the baseline inputs, with a single stable `nixpkgs`
 (`follows` threaded through the main inputs). A separate `nixpkgs-unstable` input is
 used only for the small cross-host package lane in `lib/unstable-packages.nix`, for
@@ -88,20 +90,21 @@ symlink, and GitHub Copilot gets a short entrypoint through
 
 ## Applying Changes
 
-**WSL:**
+**WSL and exodus (both NixOS):**
 
 ```bash
 nh os switch
 ```
 
-**Mac and CachyOS:**
+**Mac:**
 
 ```bash
 nh home switch
 ```
 
-`nh` auto-detects `<user>@<hostname>`, so this resolves to `shane@exodus` on the CachyOS
-box and falls back to the `shane` alias on the Mac.
+`nh os` builds the NixOS host matching the running system's hostname (`nixos` under WSL,
+`exodus` on the desktop). `nh home` auto-detects `<user>@<hostname>` and falls back to the
+`shane` alias on the Mac.
 
 Edit the layer that fits the change, then rebuild. The flake is read from the git tree,
 so **new files must be `git add`-ed** before a rebuild/switch will see them.
@@ -144,39 +147,54 @@ the settings schema itself is shared). The `programs.warp.packageSource` option 
 downstream consumer install a Warp build through Nix (e.g. `"stable"` or a source-built
 `"local-oss"` fork), but the public hosts here leave it at the default `"none"`.
 
-## CachyOS Notes
+## exodus (NixOS desktop) Notes
 
-`exodus` runs CachyOS (Arch) with Determinate Nix installed alongside it. Arch owns the
-system; home-manager owns `$HOME`. GUI apps come from the distro (Warp, Zed, 1Password)
-and Nix manages only their config — same division of labour as the Mac's Homebrew.
+`exodus` is a bare-metal NixOS KDE Plasma desktop (formerly CachyOS — see git history).
+NixOS owns the whole box, and home-manager is folded in as a NixOS module the same way
+the WSL host does it (`hosts/exodus/default.nix`). Apply with `nh os switch`. Unlike the
+Mac, the GUI apps are installed **from Nix** here (`vscode`, `jetbrains.idea`,
+`claude-code` from stable, plus `warp-terminal` and `zed-editor` from the
+`nixpkgs-unstable` lane since they move fast, in the host's `home.packages`, plus the
+system-level 1Password), and Nix owns their config via `desktop.nix`. (A Nix-installed
+Warp can't self-update from the read-only store, so tracking unstable keeps it close to
+current; bump it with `nix flake update nixpkgs-unstable`.)
 
-`modules/home/generic-linux.nix` carries the non-NixOS fixups and must **not** be
-imported on a NixOS host: `targets.genericLinux.enable` extends `XDG_DATA_DIRS` so
-Nix-installed `.desktop` entries appear in the KDE launcher, and sets `LOCALE_ARCHIVE` so
-Nix binaries stop warning against Arch's glibc. NixOS already handles both.
+`hosts/exodus/configuration.nix` is the system layer (KDE Plasma 6 on Wayland, PipeWire,
+SDDM, the `shane` account with zsh as the declarative login shell, and a blanket
+`nixpkgs.config.allowUnfree` for the desktop apps). `generic-linux.nix` is **not** imported
+— its foreign-distro fixups (`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are things NixOS already
+handles natively.
 
-One-time host setup (not Nix-managed):
+First-boot setup (not Nix-managed):
 
-1. **Bootstrap home-manager**, which isn't installed yet on a fresh box:
-   ```bash
-   nix run home-manager/release-26.05 -- switch --flake ~/.config/nix#shane@exodus
-   ```
-   After that first switch, `nh home switch` works.
-2. **Make zsh the login shell** — home-manager writes `~/.zshrc` but can't touch
-   `/etc/passwd` on a foreign distro:
-   ```bash
-   chsh -s /usr/bin/zsh
-   ```
-3. **1Password → Settings → Developer:** enable _Use the SSH agent_. It creates
+1. **Set shane's password:** `passwd` (the config defines the account but no password).
+2. **1Password → Settings → Developer:** enable _Use the SSH agent_. It creates
    `~/.1password/agent.sock`, which is where `publicHome.onepassword.sshAgent` points
-   `SSH_AUTH_SOCK`. Commit signing goes through `/opt/1Password/op-ssh-sign`.
+   `SSH_AUTH_SOCK`. Commit signing goes through the Nix-built 1Password GUI package
+   (`${pkgs._1password-gui}/share/1password/op-ssh-sign`, set as
+   `publicHome.git.sshSigningProgram`) — verify the binary is present on first run.
+
+**GPU (dual-GPU box).** Monitors are wired to the NVIDIA card (Turing RTX 2070 SUPER,
+PCI `01:00.0`); the AMD Raphael iGPU (`0f:00.0`) stays on `amdgpu` but drives no display.
+`hosts/exodus/configuration.nix` makes NVIDIA the primary driver — proprietary kernel
+module, `modesetting.enable` (required for the Plasma 6 Wayland session), `enable32Bit`
+for Steam/Proton — with **no PRIME** (that's a laptop concern; here NVIDIA already drives
+the outputs). Switching to it swaps `nouveau → nvidia` and rebuilds the initrd, so it
+needs a reboot. Warp still needs the `VK_DRIVER_FILES` pin (in `hosts/exodus/default.nix`):
+wgpu otherwise enumerates both GPUs, picks the AMD iGPU, fails to present on the
+NVIDIA-owned Wayland surface, and Warp crashes on startup and disables Wayland. The pin
+lists both the 64- and 32-bit NVIDIA ICDs
+(`/run/opengl-driver{,-32}/share/vulkan/icd.d/nvidia_icd.json` — note it's `nvidia_icd.json`,
+not the `.x86_64.json` other ICDs use) so 32-bit Vulkan (Steam/Proton) still resolves. It
+lands in `~/.config/environment.d` via `systemd.user.sessionVariables`, so it takes effect
+on next login.
 
 Warp on Linux uses XDG paths rather than the Mac's `~/.warp` (`modules/home/warp.nix`
 holds the layout table), and the first switch **overwrites** the existing
 `~/.config/warp-terminal/settings.toml` with the shared profile — Warp rewrites that file
 on any UI toggle, so as on macOS this is a seed-on-switch, not a locked file. Linux-only
-deltas belong in the host's `programs.warp.settings` (currently just `system.force_x11`,
-for this KDE/Wayland session).
+deltas belong in the host's `programs.warp.settings` (`system.force_x11` and an opacity
+override, for this KDE/Wayland session).
 
 ## WSL Notes
 
@@ -212,11 +230,11 @@ conditionals in the shell config. `modules/home/onepassword.nix` owns
 `publicHome.onepassword.sshAuthSock` (defaulting per platform) and exports
 `SSH_AUTH_SOCK`; `publicHome.git.sshSigningProgram` names the signer:
 
-| Host   | Agent socket                       | Signer                              |
-| ------ | ---------------------------------- | ----------------------------------- |
-| macOS  | `~/Library/Group Containers/...`   | `/Applications/1Password.app/...`   |
-| Linux  | `~/.1password/agent.sock` (native) | `/opt/1Password/op-ssh-sign`        |
-| WSL    | `~/.1password/agent.sock` (relay)  | none — `ssh-keygen` + relayed agent |
+| Host   | Agent socket                       | Signer                                       |
+| ------ | ---------------------------------- | -------------------------------------------- |
+| macOS  | `~/Library/Group Containers/...`   | `/Applications/1Password.app/...`            |
+| exodus | `~/.1password/agent.sock` (native) | `${pkgs._1password-gui}/…/op-ssh-sign` (Nix) |
+| WSL    | `~/.1password/agent.sock` (relay)  | none — `ssh-keygen` + relayed agent          |
 
 ### The WSL relay
 

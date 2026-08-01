@@ -32,10 +32,16 @@
         inherit inputs;
         system = "x86_64-linux";
       };
+      # Bare-metal KDE desktop — `nixos-rebuild switch --flake .#exodus` (or `nh os
+      # switch`). Formerly a standalone home-manager config on CachyOS; now full NixOS
+      # with home-manager folded in (see hosts/exodus/default.nix).
+      nixosConfigurations.exodus = import ./hosts/exodus/default.nix {
+        inherit inputs;
+        system = "x86_64-linux";
+      };
 
-      # Standalone home-manager hosts (no nix-darwin, no NixOS): the personal Mac and
-      # the CachyOS desktop. The Mac config is evaluable anywhere but buildable only on
-      # a Darwin builder.
+      # Standalone home-manager hosts (no nix-darwin, no NixOS): the personal Mac. The
+      # Mac config is evaluable anywhere but buildable only on a Darwin builder.
       homeConfigurations =
         let
           macbook = import ./hosts/macbook/default.nix {
@@ -45,13 +51,6 @@
         in
         {
           "shane@macbook" = macbook;
-
-          # CachyOS (Arch) desktop, hostname `exodus`. Non-NixOS, so home-manager is
-          # the whole config; Determinate Nix supplies the daemon.
-          "shane@exodus" = import ./hosts/cachy/default.nix {
-            inherit inputs;
-            system = "x86_64-linux";
-          };
 
           # nh home auto-detects <username>@<hostname>, then <username>. Keep
           # this alias so the public Mac can use the short nh home commands even

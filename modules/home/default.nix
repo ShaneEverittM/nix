@@ -1,6 +1,6 @@
-# The universal home-manager core, imported by every host (WSL, CachyOS, personal Mac,
+# The universal home-manager core, imported by every host (WSL, exodus, personal Mac,
 # work Mac). Platform-specific layers are imported alongside this: ./wsl.nix on WSL,
-# ./linux.nix + ./generic-linux.nix on native Linux, ./darwin.nix on the Macs. Exposed
+# ./linux.nix (+ ./desktop.nix) on native Linux, ./darwin.nix on the Macs. Exposed
 # as `homeModules.default` in flake.nix.
 { ... }:
 {

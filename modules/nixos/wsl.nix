@@ -4,6 +4,11 @@
 { pkgs, ... }:
 
 {
+  # NixOS release this WSL host was first installed on. Per-host, so it lives here
+  # rather than in modules/nixos/common.nix (which exodus also imports, on 26.05).
+  # Leave it be — changing it triggers stateful-data migrations.
+  system.stateVersion = "25.11";
+
   wsl.enable = true;
   wsl.defaultUser = "shane";
 
