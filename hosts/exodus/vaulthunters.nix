@@ -9,8 +9,6 @@
 # restore. Install the server pack into serverDir (see the preflight) and the world
 # generates on first start.
 {
-  config,
-  lib,
   pkgs,
   ...
 }:
