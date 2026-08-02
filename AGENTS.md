@@ -117,6 +117,36 @@ Notes:
 - Stage only files that belong to the requested change. Remember that new files consumed by the flake must be `git add`-ed before Nix can see them.
 - Include `flake.lock` only when inputs were intentionally updated.
 
+## Flake input update PRs
+
+Any PR that changes `flake.lock` should include an `nvd` closure diff in the body, inside
+a collapsible `<details>` block. It's a breadcrumb trail: when a later bump breaks
+something, the per-PR diff shows exactly which package versions moved, so bisecting a
+regression starts from a concrete suspect list (kernel, systemd, glibc, a driver) instead
+of a bare rev bump.
+
+- **Scope: only PRs that touch `flake.lock`.** Module-only PRs have no meaningful closure
+  delta — skip it there.
+- **Easy path:** paste the diff `nh`/`nvd` already prints when you `switch` the bump on a
+  host. That's the same artifact, for free.
+- **Canonical / reproducible path** (independent of any machine's generations — builds each
+  side, so it needs the relevant builder):
+
+  ```bash
+  base=$(nix build --no-link --print-out-paths \
+    'github:ShaneEverittM/nix/main#nixosConfigurations.exodus.config.system.build.toplevel')
+  head=$(nix build --no-link --print-out-paths \
+    '.#nixosConfigurations.exodus.config.system.build.toplevel')
+  nix run nixpkgs#nvd -- diff "$base" "$head"
+  ```
+
+- **Per output.** The diff is specific to what you built (`exodus`, the WSL system, or the
+  macbook home `activationPackage`); the toolchain-level changes that actually break things
+  are largely shared across them, so one representative host's diff is usually enough — note
+  which one it is.
+- Generation stays manual for now; automating it belongs in the Dagger/flake-check lane, not
+  a `.github` Actions job.
+
 ## Style
 
 - Format Nix with `nixfmt` / `nixfmt-rfc-style`.
