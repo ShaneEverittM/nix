@@ -257,6 +257,11 @@ in
       CapabilityBoundingSet = "";
       UMask = "0077";
 
+      # Own session keyring instead of sharing shane's: the JVM uses no keyring
+      # material, so this is free isolation (no privilege/namespace needed, unlike
+      # PrivateIPC/PrivateUsers which a user unit can't set up here).
+      KeyringMode = "private";
+
       # Home replaced with an empty tmpfs, only the server dir bound back in: the JVM
       # can't see ~/.ssh, ~/.config, etc. /nix/store stays readable under strict
       # (ro, not hidden), so the JRE and launcher resolve.
