@@ -1,12 +1,15 @@
-# Vault Hunters 3rd Edition — Remastered (Forge, Minecraft 1.18.2) served natively
-# by systemd. Successor to the ATM10 setup this replaced; the systemd skeleton
-# (user service + console FIFO + sandboxing) is carried over from
-# ~/Servers/minecraft/atm10/atm10-backup, but the runtime is entirely different:
-# Forge 1.18.2 on Java 17, not NeoForge 1.21.1 on Java 21.
+# Craftoria 2 (NeoForge 26.1.2.76, Java 25) Minecraft server, served natively by
+# systemd. Successor to the Vault Hunters setup this replaced; the systemd skeleton
+# (user service + console FIFO + RCON + sandboxing) is carried over unchanged from
+# vaulthunters.nix, but the runtime is different: NeoForge on Java 25, not Forge
+# 1.18.2 on Java 17. The tuning comments below that reference real crashes
+# (perf_event_open SIGSYS, AF_NETLINK) were earned on the older packs and are kept
+# because the hazards are loader-agnostic.
 #
-# Vault Hunters Remastered is designed for a fresh world (changed worldgen, not a
-# migration target) — which is exactly the situation here, so there is nothing to
-# restore. Install the server pack into serverDir (see the preflight) and the world
+# The pack is installed via TeamAOF's ServerStarter (server-setup-config.yaml in the
+# server dir), which runs the NeoForge installer with --installServer. That drops the
+# same argfile layout Forge used, just under net/neoforged instead of
+# net/minecraftforge, so the launcher/preflight below only change the glob. The world
 # generates on first start.
 {
   pkgs,
@@ -15,40 +18,52 @@
 
 let
   # The live server directory: pack files, mods, libraries, config, world, logs,
-  # user_jvm_args.txt, server.properties, eula.txt. Not populated yet — install the
-  # "Vault-Hunters-3rd-Edition-remastered-<ver>-server-files.zip" from CurseForge
-  # here and run its installer. The preflight fails the start until it's in place.
-  serverDir = "/home/shane/Servers/minecraft/vaulthunters";
+  # user_jvm_args.txt, server.properties, eula.txt. Populate it by running the pack's
+  # ServerStarter (see startserver.sh / server-setup-config.yaml) here, or by running
+  # the NeoForge installer directly into it. The preflight fails the start until the
+  # loader argfile is in place.
+  #
+  # btrfs: world/ is (or should be) its own NOCOW subvolume, created greenfield before
+  # first launch so the .mca region files never fragment under CoW. Resetting the world
+  # later is NOT a plain `rm -rf world` -- that either fails on the subvolume or removes
+  # it and a reflexive `mkdir world` silently gives back a CoW directory. The correct
+  # reset is:
+  #     btrfs subvolume delete world
+  #     btrfs subvolume create world
+  #     chattr +C world              # NOCOW is inherited only by files created after
+  serverDir = "/home/shane/Servers/minecraft/craftoria2";
 
-  # Java 17 from the system closure — MC 1.18.2 / Forge's runtime, not Java 21.
-  jre = pkgs.jdk17_headless;
+  # Java 25 -- Craftoria 2 requires it (see the pack README). Headless from the system
+  # closure, not the desktop JDK.
+  jre = pkgs.jdk25_headless;
 
-  # Locate the Forge argfile at runtime instead of pinning its version. Forge 1.17+
-  # writes libraries/net/minecraftforge/forge/<mc>-<forge>/unix_args.txt at install
-  # time; globbing it means a pack update that bumps Forge needs no nix edit. Execs
-  # java as the final step so the JVM stays PID 1 of the unit — signals reach it
-  # directly and StandardInput=socket's fd is inherited.
+  # Locate the NeoForge argfile at runtime instead of pinning its version. NeoForge
+  # writes libraries/net/neoforged/neoforge/<version>/unix_args.txt at install time;
+  # globbing it means a pack update that bumps NeoForge needs no nix edit. Execs java
+  # as the final step so the JVM stays PID 1 of the unit -- signals reach it directly
+  # and StandardInput=socket's fd is inherited.
   launcher = pkgs.writeShellApplication {
-    name = "vaulthunters-launch";
+    name = "craftoria-launch";
     runtimeInputs = [ jre ];
     text = ''
       cd "${serverDir}" || exit 1
       shopt -s nullglob
-      matches=( "${serverDir}"/libraries/net/minecraftforge/forge/*/unix_args.txt )
+      matches=( "${serverDir}"/libraries/net/neoforged/neoforge/*/unix_args.txt )
       if [ "''${#matches[@]}" -eq 0 ]; then
-        echo "no Forge unix_args.txt under ${serverDir}/libraries/net/minecraftforge/forge/*/ -- run the server installer" >&2
+        echo "no NeoForge unix_args.txt under ${serverDir}/libraries/net/neoforged/neoforge/*/ -- run the server installer" >&2
         exit 1
       fi
-      # Memory/GC tuning stays in user_jvm_args.txt, under your control.
+      # Memory/GC tuning stays in user_jvm_args.txt, under your control (the pack ships
+      # 5G max / 3G min, G1GC -- set those there).
       exec java @user_jvm_args.txt "@''${matches[0]}" nogui
     '';
   };
 
   # Asserts what NixOS can't guarantee before the JVM starts: an accepted EULA, a
-  # writable server dir, and that the pack was actually installed (Forge argfile
+  # writable server dir, and that the pack was actually installed (NeoForge argfile
   # present). THP stays a cheap belt-and-suspenders check.
   preflight = pkgs.writeShellApplication {
-    name = "vaulthunters-preflight";
+    name = "craftoria-preflight";
     runtimeInputs = with pkgs; [
       coreutils
       gnugrep
@@ -64,7 +79,7 @@ let
       warn() { printf '  [warn] %s\n' "$1"; }
       good() { printf '  [ ok ] %s\n' "$1"; }
 
-      echo "vaulthunters preflight"
+      echo "craftoria preflight"
 
       thp=/sys/kernel/mm/transparent_hugepage/enabled
       if [ -r "$thp" ]; then
@@ -91,11 +106,20 @@ let
       fi
 
       shopt -s nullglob
-      matches=( "${serverDir}"/libraries/net/minecraftforge/forge/*/unix_args.txt )
+      matches=( "${serverDir}"/libraries/net/neoforged/neoforge/*/unix_args.txt )
       if [ "''${#matches[@]}" -gt 0 ]; then
-        good "Forge installed ($(basename "$(dirname "''${matches[0]}")"))"
+        good "NeoForge installed ($(basename "$(dirname "''${matches[0]}")"))"
       else
-        bad "no Forge unix_args.txt -- install the server pack + run its installer"
+        bad "no NeoForge unix_args.txt -- install the server pack + run its installer"
+      fi
+
+      # java @user_jvm_args.txt fails hard if the file is absent, and it's where -Xmx
+      # lives -- a modded pack won't run on the default heap anyway. ServerStarter does
+      # not create it (the NeoForge installer would), so check for it explicitly.
+      if [ -r "${serverDir}/user_jvm_args.txt" ]; then
+        good "user_jvm_args.txt present"
+      else
+        bad "no ${serverDir}/user_jvm_args.txt -- create it with your -Xmx/-Xms (the launcher reads it)"
       fi
 
       good "JRE ${jre}/bin/java"
@@ -112,7 +136,7 @@ let
   # the PID-1/clean-shutdown design: RCON is just a TCP listener inside the game, so
   # the FIFO, journal output, and SIGTERM-save path all stay exactly as they are.
   #
-  # The secret lives only in serverDir/server.properties (out of the store — this repo
+  # The secret lives only in serverDir/server.properties (out of the store -- this repo
   # stays public); the wrapper reads it at call time and keeps it off argv via
   # MCRCON_PASS. Enable it once in server.properties (that file is regenerated by the
   # server, not managed by Nix):
@@ -121,10 +145,10 @@ let
   #     rcon.password=<pick-one>
   # RCON binds to server-ip (all interfaces when empty), but 25575 is deliberately NOT
   # in the firewall allow-list, so it is reachable on loopback only. Keep it that way.
-  #     vh-console          # interactive prompt
-  #     vh-console list     # one-shot command: prints the reply and exits
+  #     craftoria-console          # interactive prompt
+  #     craftoria-console list     # one-shot command: prints the reply and exits
   rconConsole = pkgs.writeShellApplication {
-    name = "vh-console";
+    name = "craftoria-console";
     runtimeInputs = with pkgs; [
       mcrcon
       coreutils
@@ -133,20 +157,20 @@ let
     text = ''
       props="${serverDir}/server.properties"
       if [ ! -r "$props" ]; then
-        echo "vh-console: cannot read $props (is the server installed?)" >&2
+        echo "craftoria-console: cannot read $props (is the server installed?)" >&2
         exit 1
       fi
       # tail -n1 (not head) so a closed pipe can't SIGPIPE sed into a pipefail exit.
       getprop() { sed -n "s/^$1=//p" "$props" | tr -d '\r' | tail -n1; }
 
       if [ "$(getprop enable-rcon)" != "true" ]; then
-        echo "vh-console: enable-rcon is not 'true' in $props" >&2
+        echo "craftoria-console: enable-rcon is not 'true' in $props" >&2
         exit 1
       fi
       port="$(getprop rcon.port)"; port="''${port:-25575}"
       MCRCON_PASS="$(getprop rcon.password)"
       if [ -z "$MCRCON_PASS" ]; then
-        echo "vh-console: rcon.password is empty in $props" >&2
+        echo "craftoria-console: rcon.password is empty in $props" >&2
         exit 1
       fi
       export MCRCON_PASS
@@ -165,7 +189,7 @@ in
   # Keep transparent hugepages off `always`. This started as an ATM10/Java-21
   # incident (G1 SIGSEGV in G1RegionMarkStatsCache), but THP=always corrupting G1's
   # mark bitmaps is a general modded-server hazard, and the rule is free. madvise,
-  # not never — so still never add -XX:+UseTransparentHugePages / -XX:+UseLargePages
+  # not never -- so still never add -XX:+UseTransparentHugePages / -XX:+UseLargePages
   # to user_jvm_args.txt.
   systemd.tmpfiles.rules = [
     "w! /sys/kernel/mm/transparent_hugepage/enabled - - - - madvise"
@@ -178,10 +202,13 @@ in
   # Start shane's user units at boot without an interactive login.
   users.users.shane.linger = true;
 
-  # `vh-console` for an interactive/one-shot RCON prompt; raw mcrcon for scripting.
+  # `craftoria-console` for an interactive/one-shot RCON prompt; raw mcrcon for
+  # scripting. e2fsprogs supplies chattr/lsattr -- not in the base system profile, and
+  # needed for the NOCOW world-reset ritual documented next to serverDir above.
   environment.systemPackages = [
     rconConsole
     pkgs.mcrcon
+    pkgs.e2fsprogs
   ];
 
   # ---- the service + console socket ------------------------------------------
@@ -191,25 +218,26 @@ in
 
   # Console input FIFO. systemd holds the read end open so a writer closing does not
   # EOF the server into a shutdown:
-  #   echo "list" > /run/user/1000/vaulthunters.stdin
-  # Output is on the journal (`journalctl --user -u vaulthunters -f`). For an
-  # interactive command prompt with inline replies, prefer `vh-console` (RCON) above.
-  systemd.user.sockets.vaulthunters = {
-    description = "Vault Hunters Minecraft server console FIFO";
-    partOf = [ "vaulthunters.service" ];
+  #   echo "list" > /run/user/1000/craftoria.stdin
+  # Output is on the journal (`journalctl --user -u craftoria -f`). For an
+  # interactive command prompt with inline replies, prefer `craftoria-console` (RCON)
+  # above.
+  systemd.user.sockets.craftoria = {
+    description = "Craftoria 2 Minecraft server console FIFO";
+    partOf = [ "craftoria.service" ];
     socketConfig = {
-      ListenFIFO = "%t/vaulthunters.stdin";
+      ListenFIFO = "%t/craftoria.stdin";
       SocketMode = "0600";
       RemoveOnStop = true;
-      Service = "vaulthunters.service";
+      Service = "craftoria.service";
     };
   };
 
-  systemd.user.services.vaulthunters = {
-    description = "Minecraft server (Vault Hunters 3rd Edition Remastered, Forge 1.18.2)";
-    requires = [ "vaulthunters.socket" ];
+  systemd.user.services.craftoria = {
+    description = "Minecraft server (Craftoria 2, NeoForge 26.1.2.76)";
+    requires = [ "craftoria.socket" ];
     after = [
-      "vaulthunters.socket"
+      "craftoria.socket"
       "network-online.target"
     ];
     wants = [ "network-online.target" ];
@@ -225,9 +253,9 @@ in
       WorkingDirectory = serverDir;
 
       # Fail fast with a readable reason instead of a confusing JVM error minutes in.
-      ExecStartPre = "${preflight}/bin/vaulthunters-preflight";
-      # Resolves the installed Forge version, then execs java (JVM becomes PID 1).
-      ExecStart = "${launcher}/bin/vaulthunters-launch";
+      ExecStartPre = "${preflight}/bin/craftoria-preflight";
+      # Resolves the installed NeoForge version, then execs java (JVM becomes PID 1).
+      ExecStart = "${launcher}/bin/craftoria-launch";
 
       # Console in via the FIFO socket, logs out to the journal.
       StandardInput = "socket";
@@ -242,7 +270,7 @@ in
       SuccessExitStatus = 143;
 
       # Modded startup is slow; Type=exec means this is a formality (systemd reports
-      # "started" at execve, not readiness — watch logs/latest.log for "Done").
+      # "started" at execve, not readiness -- watch logs/latest.log for "Done").
       TimeoutStartSec = 1200;
       Restart = "on-failure";
       RestartSec = 30;
@@ -283,11 +311,11 @@ in
       LockPersonality = true;
       SystemCallArchitectures = "native";
       # @system-service is an allow-list, and it omits perf_event_open (x86_64
-      # syscall 298) — which VH's bundled spark profiler calls via async-profiler.
+      # syscall 298) -- which the bundled spark profiler calls via async-profiler.
       # Under seccomp's default kill action that surfaced as SIGSYS (code=dumped,
       # status=31/SYS) about a minute into startup. Allow it explicitly so spark
       # works, and make any *other* unlisted syscall return EPERM instead of killing
-      # the JVM: a 200+ mod pack is too broad a surface to enumerate up front, and a
+      # the JVM: a large mod pack is too broad a surface to enumerate up front, and a
       # soft EPERM lets a mod degrade rather than crash-loop a half-generated world.
       SystemCallFilter = [
         "@system-service"
@@ -306,7 +334,7 @@ in
       # Deliberately NOT set (each silently breaks a JVM): MemoryDenyWriteExecute
       # (the JIT maps its code cache W+X), ProcSubset=pid (hides /proc/meminfo +
       # cpuinfo the JVM reads for ergonomics), MemoryMax (a too-tight ceiling gives
-      # OOM kills that mimic a crash — leave it to -Xmx in user_jvm_args.txt).
+      # OOM kills that mimic a crash -- leave it to -Xmx in user_jvm_args.txt).
     };
   };
 }

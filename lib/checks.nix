@@ -96,10 +96,10 @@ let
         exodus-toplevel = self.nixosConfigurations.exodus.config.system.build.toplevel;
         wsl-toplevel = self.nixosConfigurations.nixos.config.system.build.toplevel;
 
-        # Boots a VM and smoke-tests the vaulthunters console plumbing (FIFO socket +
-        # sandboxing) with a stand-in for the un-CI-able Forge server. NixOS VM tests
+        # Boots a VM and smoke-tests the craftoria console plumbing (FIFO socket +
+        # sandboxing) with a stand-in for the un-CI-able NeoForge server. NixOS VM tests
         # need /dev/kvm, so the Linux CI job enables it (see .github/workflows/ci.yml).
-        vaulthunters-console = import ../tests/vaulthunters-console.nix { pkgs = pkgsFor system; };
+        craftoria-console = import ../tests/craftoria-console.nix { pkgs = pkgsFor system; };
       };
       aarch64-darwin = {
         macbook = self.homeConfigurations."shane@macbook".activationPackage;
