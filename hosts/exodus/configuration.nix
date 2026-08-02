@@ -15,6 +15,8 @@
     ./craftoria.nix
     # btrbk: weekly local snapshots of home + the Craftoria world subvolume.
     ./btrbk.nix
+    # btrfs mount-time tuning (compress/noatime) + monthly autoScrub.
+    ./btrfs.nix
   ];
 
   # Personal desktop: allow the unfree apps this box runs (1Password, Warp, VS Code,
