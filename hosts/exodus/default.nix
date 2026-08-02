@@ -65,6 +65,24 @@ inputs.nixpkgs.lib.nixosSystem {
           # Enable the agent socket in 1Password → Settings → Developer on first boot.
           publicHome.onepassword.sshAgent = true;
 
+          # Start 1Password at login, silently to the system tray, so the SSH agent is
+          # already up when the session begins -- otherwise the first git push / signed
+          # commit of the day fails ("could not connect to socket") until the app is
+          # opened by hand. `--silent` is 1Password's own start-minimized flag (what its
+          # "Start at login" setting writes); the XDG autostart entry is read by the KDE
+          # session. Lives here, not in the cross-platform onepassword.nix, because the
+          # Nix-built GUI + tray autostart is specific to this bare-metal desktop (WSL
+          # relays the agent from Windows; the Macs use native login items).
+          xdg.configFile."autostart/1password.desktop".text = ''
+            [Desktop Entry]
+            Type=Application
+            Name=1Password
+            Icon=1password
+            Exec=${pkgs._1password-gui}/bin/1password --silent
+            Terminal=false
+            X-GNOME-Autostart-enabled=true
+          '';
+
           # Warp is installed from Nix here (see home.packages below); this module still
           # only owns its config, under the XDG paths Warp uses on Linux.
           programs.warp.settings = {
