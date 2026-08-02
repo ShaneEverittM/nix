@@ -177,6 +177,32 @@
   # Provide a real dynamic linker at the FHS path so prebuilt/foreign binaries can run.
   programs.nix-ld.enable = true;
 
+  # Memory-pressure resilience. 14 GiB RAM, no disk swap (swapDevices = [] in the hardware
+  # scan), running a JVM Minecraft server (./vaulthunters.nix) alongside the desktop. With
+  # zero swap a memory spike can't evict anonymous pages, so the kernel thrashes /nix/store
+  # code pages and livelocks instead of OOM-killing — which is exactly how this box hard-
+  # froze once (progressive kwin/pipewire/libinput stalls → 31 s freeze → power cycle).
+  #
+  # zram: compressed in-RAM swap so anon pages become reclaimable and the kernel/oomd can
+  # act cleanly. earlyoom: userspace backstop that SIGTERMs the biggest hog while there's
+  # still headroom, since the in-kernel OOM killer fires too late under this thrash pattern.
+  # A low-priority disk swapfile for genuine overflow capacity could be layered *under* zram
+  # later — deferred because a btrfs swapfile needs NOCOW + snapshot exclusion.
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryPercent = 100; # max device size; compression means real RAM used is well under this
+  };
+
+  services.earlyoom = {
+    enable = true;
+    # Act before the machine livelocks: kill when free RAM *and* free swap (zram) both fall
+    # below these. Low RAM threshold leans on zram absorbing the first wave; the swap
+    # threshold catches zram itself filling up.
+    freeMemThreshold = 5;
+    freeSwapThreshold = 10;
+  };
+
   # This value determines the NixOS release from which the default settings for stateful
   # data (file locations, database versions) were taken. Leave it at the release of the
   # first install; per-host, so it lives here rather than in modules/nixos/common.nix.
