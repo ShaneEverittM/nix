@@ -113,6 +113,15 @@ let
         bad "no NeoForge unix_args.txt -- install the server pack + run its installer"
       fi
 
+      # java @user_jvm_args.txt fails hard if the file is absent, and it's where -Xmx
+      # lives -- a modded pack won't run on the default heap anyway. ServerStarter does
+      # not create it (the NeoForge installer would), so check for it explicitly.
+      if [ -r "${serverDir}/user_jvm_args.txt" ]; then
+        good "user_jvm_args.txt present"
+      else
+        bad "no ${serverDir}/user_jvm_args.txt -- create it with your -Xmx/-Xms (the launcher reads it)"
+      fi
+
       good "JRE ${jre}/bin/java"
 
       if [ "$fails" -gt 0 ]; then
@@ -194,10 +203,12 @@ in
   users.users.shane.linger = true;
 
   # `craftoria-console` for an interactive/one-shot RCON prompt; raw mcrcon for
-  # scripting.
+  # scripting. e2fsprogs supplies chattr/lsattr -- not in the base system profile, and
+  # needed for the NOCOW world-reset ritual documented next to serverDir above.
   environment.systemPackages = [
     rconConsole
     pkgs.mcrcon
+    pkgs.e2fsprogs
   ];
 
   # ---- the service + console socket ------------------------------------------

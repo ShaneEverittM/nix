@@ -13,6 +13,8 @@
     ./hardware-configuration.nix
     # Craftoria 2 Minecraft server: native systemd user unit + host prereqs.
     ./craftoria.nix
+    # btrbk: weekly local snapshots of home + the Craftoria world subvolume.
+    ./btrbk.nix
   ];
 
   # Personal desktop: allow the unfree apps this box runs (1Password, Warp, VS Code,
@@ -178,7 +180,7 @@
   programs.nix-ld.enable = true;
 
   # Memory-pressure resilience. 14 GiB RAM, no disk swap (swapDevices = [] in the hardware
-  # scan), running a JVM Minecraft server (./vaulthunters.nix) alongside the desktop. With
+  # scan), running a JVM Minecraft server (./craftoria.nix) alongside the desktop. With
   # zero swap a memory spike can't evict anonymous pages, so the kernel thrashes /nix/store
   # code pages and livelocks instead of OOM-killing — which is exactly how this box hard-
   # froze once (progressive kwin/pipewire/libinput stalls → 31 s freeze → power cycle).
