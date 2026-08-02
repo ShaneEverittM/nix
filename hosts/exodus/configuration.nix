@@ -11,8 +11,8 @@
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    # Vault Hunters Minecraft server: native systemd user unit + host prereqs.
-    ./vaulthunters.nix
+    # Craftoria 2 Minecraft server: native systemd user unit + host prereqs.
+    ./craftoria.nix
   ];
 
   # Personal desktop: allow the unfree apps this box runs (1Password, Warp, VS Code,

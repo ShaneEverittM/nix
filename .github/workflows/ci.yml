@@ -49,7 +49,7 @@ jobs:
         with:
           tool-cache: false
 
-      # The vaulthunters-console NixOS VM test needs /dev/kvm. Hosted Linux runners
+      # The craftoria-console NixOS VM test needs /dev/kvm. Hosted Linux runners
       # expose it but not to the runner user's group; open it up before Nix starts so
       # the daemon auto-detects the `kvm` system feature the test derivation requires.
       - name: Enable KVM
