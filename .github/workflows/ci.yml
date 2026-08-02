@@ -31,9 +31,11 @@ jobs:
           - system: x86_64-linux
             runs-on: ubuntu-latest
             free-disk: true
+            kvm: true
           - system: aarch64-darwin
             runs-on: macos-14
             free-disk: false
+            kvm: false
 
     steps:
       - name: Checkout
@@ -46,6 +48,17 @@ jobs:
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
+
+      # The vaulthunters-console NixOS VM test needs /dev/kvm. Hosted Linux runners
+      # expose it but not to the runner user's group; open it up before Nix starts so
+      # the daemon auto-detects the `kvm` system feature the test derivation requires.
+      - name: Enable KVM
+        if: matrix.kvm
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@v3
