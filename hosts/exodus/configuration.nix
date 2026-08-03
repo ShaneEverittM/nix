@@ -11,7 +11,7 @@
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    # Craftoria 2 Minecraft server: native systemd user unit + host prereqs.
+    # Craftoria 2 Minecraft server: native systemd service + host prereqs.
     ./craftoria.nix
     # btrbk: weekly local snapshots of home + the Craftoria world subvolume.
     ./btrbk.nix
