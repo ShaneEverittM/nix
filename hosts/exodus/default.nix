@@ -70,19 +70,38 @@ inputs.nixpkgs.lib.nixosSystem {
           # already up when the session begins -- otherwise the first git push / signed
           # commit of the day fails ("could not connect to socket") until the app is
           # opened by hand. `--silent` is 1Password's own start-minimized flag (what its
-          # "Start at login" setting writes); the XDG autostart entry is read by the KDE
-          # session. Lives here, not in the cross-platform onepassword.nix, because the
-          # Nix-built GUI + tray autostart is specific to this bare-metal desktop (WSL
-          # relays the agent from Windows; the Macs use native login items).
-          xdg.configFile."autostart/1password.desktop".text = ''
-            [Desktop Entry]
-            Type=Application
-            Name=1Password
-            Icon=1password
-            Exec=${pkgs._1password-gui}/bin/1password --silent
-            Terminal=false
-            X-GNOME-Autostart-enabled=true
-          '';
+          # "Start at login" setting writes). Lives here, not in the cross-platform
+          # onepassword.nix, because the Nix GUI + tray autostart is specific to this
+          # bare-metal desktop (WSL relays the agent from Windows; the Macs use native
+          # login items).
+          #
+          # A native systemd user service, NOT an XDG autostart .desktop: the .desktop
+          # becomes a *generated* unit with no [Service] control, and 1Password is
+          # Electron -- on the SIGTERM systemd sends at logout, Chromium tends to trap
+          # (signal 5) while tearing down its GPU/zygote children instead of exiting 0.
+          # That crash-on-logout is what once seeded a multi-hour DrKonqi coredump loop
+          # (see the crash-handling block in configuration.nix). Owning the unit lets us
+          # send a gentler stop signal, bound the stop time, and treat the trap as a
+          # clean exit. Ordered after plasma-workspace.target so the tray exists before
+          # --silent minimizes into it. Keep 1Password's in-app "Start at login" OFF so
+          # it doesn't also write the .desktop and double-start.
+          systemd.user.services."1password" = {
+            Unit = {
+              Description = "1Password (start minimized to the system tray)";
+              After = [ "plasma-workspace.target" ];
+              PartOf = [ "graphical-session.target" ];
+            };
+            Service = {
+              ExecStart = "${pkgs._1password-gui}/bin/1password --silent";
+              # Chromium runs its own quit path on SIGINT but often traps on SIGTERM
+              # mid-teardown; treat a trap (128+5=133) as success so a messy-but-final
+              # exit isn't logged as a crash. Bound the stop so logout never waits on it.
+              KillSignal = "SIGINT";
+              TimeoutStopSec = 10;
+              SuccessExitStatus = "SIGTRAP";
+            };
+            Install.WantedBy = [ "graphical-session.target" ];
+          };
 
           # Warp is installed from Nix here (see home.packages below); this module still
           # only owns its config, under the XDG paths Warp uses on Linux.

@@ -218,6 +218,30 @@
     freeSwapThreshold = 10;
   };
 
+  # Crash-handling blast radius. A KDE app dying with no session to draw into -- e.g.
+  # 1Password trapping on the SIGTERM systemd sends it at logout -- hands its coredump
+  # to DrKonqi, whose systemd-coredump auto-launcher then recursively crashes on its
+  # own missing display: the launcher aborts, dumps core, is re-launched by the socket,
+  # aborts again... For hours (once observed: ~2 crashes/s for 5h, ~40 GB of coredumps,
+  # a pegged core, ending in a forced power cycle from a blank-on-monitor-replug greeter).
+  #
+  # We don't file KDE bug reports from this box, and `coredumpctl {list,info,gdb}` still
+  # gives backtraces on demand, so mask DrKonqi's coredump auto-launcher (kills the loop
+  # at its mechanism) and its Sentry telemetry uploader. systemd-coredump itself stays
+  # enabled -- just bounded so no future crash-storm can fill the disk. The 1Password
+  # side of the trigger is handled by owning its user service (see ./default.nix).
+  systemd.user.units."drkonqi-coredump-launcher.socket".enable = false;
+  systemd.user.units."drkonqi-coredump-launcher@.service".enable = false;
+  systemd.user.units."drkonqi-sentry-postman.service".enable = false;
+  systemd.user.units."drkonqi-sentry-postman.timer".enable = false;
+  systemd.user.units."drkonqi-sentry-postman.path".enable = false;
+
+  systemd.coredump.settings.Coredump = {
+    MaxUse = "2G";
+    KeepFree = "5G";
+    ProcessSizeMax = "2G";
+  };
+
   # This value determines the NixOS release from which the default settings for stateful
   # data (file locations, database versions) were taken. Leave it at the release of the
   # first install; per-host, so it lives here rather than in modules/nixos/common.nix.
