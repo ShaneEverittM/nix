@@ -17,6 +17,8 @@
     ./btrbk.nix
     # btrfs mount-time tuning (compress/noatime) + monthly autoScrub.
     ./btrfs.nix
+    # Beszel metrics dashboard (hub + agent) exposed over Tailscale.
+    ./beszel.nix
   ];
 
   # Personal desktop: allow the unfree apps this box runs (1Password, Warp, VS Code,
