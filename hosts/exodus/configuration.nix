@@ -111,6 +111,17 @@
   # manual `chsh` because the distro owned /etc/passwd; NixOS owns it here.
   programs.zsh.enable = true;
 
+  # AppImage runtime. AppImages assume an FHS layout NixOS doesn't provide, so they
+  # can't just be chmod+x'd and run. This module ships an FHS sandbox for them, and
+  # `binfmt = true` registers a kernel handler so any `*.AppImage` executes directly
+  # (no `appimage-run` wrapper). Used by Cider — a paywalled build that can't be
+  # fetched reproducibly into the store, so it lives as a local file in
+  # ~/Applications with only its launcher entry declared in home (see default.nix).
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
+
   # Primary user account. Set a password with `passwd` after the first switch.
   users.users."shane" = {
     isNormalUser = true;
@@ -205,6 +216,30 @@
     # threshold catches zram itself filling up.
     freeMemThreshold = 5;
     freeSwapThreshold = 10;
+  };
+
+  # Crash-handling blast radius. A KDE app dying with no session to draw into -- e.g.
+  # 1Password trapping on the SIGTERM systemd sends it at logout -- hands its coredump
+  # to DrKonqi, whose systemd-coredump auto-launcher then recursively crashes on its
+  # own missing display: the launcher aborts, dumps core, is re-launched by the socket,
+  # aborts again... For hours (once observed: ~2 crashes/s for 5h, ~40 GB of coredumps,
+  # a pegged core, ending in a forced power cycle from a blank-on-monitor-replug greeter).
+  #
+  # We don't file KDE bug reports from this box, and `coredumpctl {list,info,gdb}` still
+  # gives backtraces on demand, so mask DrKonqi's coredump auto-launcher (kills the loop
+  # at its mechanism) and its Sentry telemetry uploader. systemd-coredump itself stays
+  # enabled -- just bounded so no future crash-storm can fill the disk. The 1Password
+  # side of the trigger is handled by owning its user service (see ./default.nix).
+  systemd.user.units."drkonqi-coredump-launcher.socket".enable = false;
+  systemd.user.units."drkonqi-coredump-launcher@.service".enable = false;
+  systemd.user.units."drkonqi-sentry-postman.service".enable = false;
+  systemd.user.units."drkonqi-sentry-postman.timer".enable = false;
+  systemd.user.units."drkonqi-sentry-postman.path".enable = false;
+
+  systemd.coredump.settings.Coredump = {
+    MaxUse = "2G";
+    KeepFree = "5G";
+    ProcessSizeMax = "2G";
   };
 
   # This value determines the NixOS release from which the default settings for stateful
