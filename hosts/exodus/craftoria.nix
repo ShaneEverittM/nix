@@ -292,9 +292,7 @@ in
       UMask = "0077";
 
       # Own service keyring instead of sharing one: the JVM uses no keyring material,
-      # so this is free isolation. As a system unit PrivateUsers/PrivateIPC are now
-      # available too, but they are deliberately left for a separate hardening pass —
-      # this change is only the user->system scope move.
+      # so this is free isolation.
       KeyringMode = "private";
 
       # Home replaced with an empty tmpfs, only the server dir bound back in: the JVM
@@ -312,6 +310,22 @@ in
       ProtectKernelModules = true;
       ProtectKernelLogs = true;
       ProtectControlGroups = true;
+
+      # Now reachable as a system unit (a user unit couldn't set these up). PrivateIPC
+      # gives the JVM its own System V IPC / POSIX message-queue namespace -- the server
+      # uses neither, so it is free isolation. PrivateUsers maps only shane + root into
+      # a user namespace (every other host UID appears as nobody), so a compromise can't
+      # reach files owned by other users and any setuid bit in the closure is inert;
+      # shane-owned world/config files stay writable because shane is the mapped user.
+      #
+      # A user namespace *can* block perf_event_open -- the syscall kept above for
+      # spark's async-profiler -- but verified on this host it does not: `spark
+      # profiler` reports engine "(async)" and completes a run under PrivateUsers.
+      # Breadcrumb: if a future kernel/userns tightening makes spark fall back off the
+      # async engine, PrivateUsers is the first suspect; drop it and keep PrivateIPC.
+      PrivateIPC = true;
+      PrivateUsers = true;
+
       RestrictNamespaces = true;
       RestrictRealtime = true;
       RestrictSUIDSGID = true;
