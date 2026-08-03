@@ -1,7 +1,8 @@
 # Craftoria 2 (NeoForge 26.1.2.76, Java 25) Minecraft server, served natively by
 # systemd. Successor to the Vault Hunters setup this replaced; the systemd skeleton
-# (user service + console FIFO + RCON + sandboxing) is carried over unchanged from
-# vaulthunters.nix, but the runtime is different: NeoForge on Java 25, not Forge
+# (console FIFO + RCON + sandboxing) is carried over from vaulthunters.nix (and
+# promoted from a user unit to a system service — see the service section below),
+# but the runtime is different: NeoForge on Java 25, not Forge
 # 1.18.2 on Java 17. The tuning comments below that reference real crashes
 # (perf_event_open SIGSYS, AF_NETLINK) were earned on the older packs and are kept
 # because the hazards are loader-agnostic.
@@ -199,9 +200,6 @@ in
   # NixOS firewall genuinely governs it.
   networking.firewall.allowedTCPPorts = [ 25565 ];
 
-  # Start shane's user units at boot without an interactive login.
-  users.users.shane.linger = true;
-
   # `craftoria-console` for an interactive/one-shot RCON prompt; raw mcrcon for
   # scripting. e2fsprogs supplies chattr/lsattr -- not in the base system profile, and
   # needed for the NOCOW world-reset ritual documented next to serverDir above.
@@ -212,28 +210,33 @@ in
   ];
 
   # ---- the service + console socket ------------------------------------------
-  # User units, so they run as shane and the world files stay shane-owned. Single-
-  # user box, so `systemd.user.*` is effectively shane-only; linger starts them at
-  # boot.
+  # System units running as User=shane: the world/config/log files stay shane-owned
+  # exactly as before, but the server's lifecycle now belongs to the host (boots with
+  # the machine, lives under the system manager) instead of shane's login session —
+  # which is what it always semantically was, a public boot-critical daemon. This is
+  # why `linger` is gone: it only existed to force user units to start at boot.
 
   # Console input FIFO. systemd holds the read end open so a writer closing does not
   # EOF the server into a shutdown:
-  #   echo "list" > /run/user/1000/craftoria.stdin
-  # Output is on the journal (`journalctl --user -u craftoria -f`). For an
-  # interactive command prompt with inline replies, prefer `craftoria-console` (RCON)
-  # above.
-  systemd.user.sockets.craftoria = {
+  #   echo "list" > /run/craftoria.stdin
+  # SocketUser=shane keeps the node shane-writable (system sockets are created owned
+  # by root by default). Output is on the journal (`journalctl -u craftoria -f`). For
+  # an interactive command prompt with inline replies, prefer `craftoria-console`
+  # (RCON) above.
+  systemd.sockets.craftoria = {
     description = "Craftoria 2 Minecraft server console FIFO";
     partOf = [ "craftoria.service" ];
     socketConfig = {
+      # %t is /run for system units (was /run/user/1000 under the user manager).
       ListenFIFO = "%t/craftoria.stdin";
+      SocketUser = "shane";
       SocketMode = "0600";
       RemoveOnStop = true;
       Service = "craftoria.service";
     };
   };
 
-  systemd.user.services.craftoria = {
+  systemd.services.craftoria = {
     description = "Minecraft server (Craftoria 2, NeoForge 26.1.2.76)";
     requires = [ "craftoria.socket" ];
     after = [
@@ -241,7 +244,7 @@ in
       "network-online.target"
     ];
     wants = [ "network-online.target" ];
-    wantedBy = [ "default.target" ];
+    wantedBy = [ "multi-user.target" ];
 
     # Bound the restart loop: default 5/10s can't trip a 30s RestartSec, so a
     # repeating crash would restart forever, each risking a half-written world.
@@ -250,6 +253,9 @@ in
 
     serviceConfig = {
       Type = "exec";
+      # Run as shane so world/config/log files stay shane-owned, identical to the
+      # former user unit — only the managing scope (system vs user) changes.
+      User = "shane";
       WorkingDirectory = serverDir;
 
       # Fail fast with a readable reason instead of a confusing JVM error minutes in.
@@ -285,9 +291,10 @@ in
       CapabilityBoundingSet = "";
       UMask = "0077";
 
-      # Own session keyring instead of sharing shane's: the JVM uses no keyring
-      # material, so this is free isolation (no privilege/namespace needed, unlike
-      # PrivateIPC/PrivateUsers which a user unit can't set up here).
+      # Own service keyring instead of sharing one: the JVM uses no keyring material,
+      # so this is free isolation. As a system unit PrivateUsers/PrivateIPC are now
+      # available too, but they are deliberately left for a separate hardening pass —
+      # this change is only the user->system scope move.
       KeyringMode = "private";
 
       # Home replaced with an empty tmpfs, only the server dir bound back in: the JVM
