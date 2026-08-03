@@ -111,6 +111,17 @@
   # manual `chsh` because the distro owned /etc/passwd; NixOS owns it here.
   programs.zsh.enable = true;
 
+  # AppImage runtime. AppImages assume an FHS layout NixOS doesn't provide, so they
+  # can't just be chmod+x'd and run. This module ships an FHS sandbox for them, and
+  # `binfmt = true` registers a kernel handler so any `*.AppImage` executes directly
+  # (no `appimage-run` wrapper). Used by Cider — a paywalled build that can't be
+  # fetched reproducibly into the store, so it lives as a local file in
+  # ~/Applications with only its launcher entry declared in home (see default.nix).
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
+
   # Primary user account. Set a password with `passwd` after the first switch.
   users.users."shane" = {
     isNormalUser = true;

@@ -47,6 +47,7 @@ inputs.nixpkgs.lib.nixosSystem {
             ../../modules/home # core bundle (common + git + shell + rust + bun)
             ../../modules/home/linux.nix # shared Linux layer (no Windows/WSL bits)
             ../../modules/home/desktop.nix # GUI dotfiles (vscode + zed + warp + jetbrains)
+            ./cider.nix # launcher entry for the out-of-store Cider AppImage
           ];
 
           # Personal git identity (already public). The work Mac sets its own in the
