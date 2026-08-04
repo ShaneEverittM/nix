@@ -95,9 +95,6 @@
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
 
-  # Enable CUPS to print documents.
-  services.printing.enable = true;
-
   # Sound with PipeWire.
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
