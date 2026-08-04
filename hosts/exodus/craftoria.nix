@@ -68,10 +68,11 @@ let
       # Fork the readiness reporter as a cgroup SIBLING before the exec: the `&` child is
       # already a separate process when `exec` replaces this shell with java, so java keeps
       # the unit's main PID (signals reach it directly, StandardInput=socket's fd is
-      # inherited) while the poller sends READY=1 on its behalf under Type=notify +
-      # NotifyAccess=all. The poller is purely a reporter -- it arms no kill, so if it dies
-      # the unit keeps running and only loses its status line.
-      ${health}/bin/craftoria-health &
+      # inherited) while the reporter sends READY=1 on its behalf under Type=notify +
+      # NotifyAccess=all. It exits as soon as the server answers, leaving java alone in the
+      # cgroup. If it were to die before that, the unit never reports ready and fails at
+      # TimeoutStartSec -- the server itself keeps running until systemd tears it down.
+      ${ready}/bin/craftoria-ready &
 
       # Memory/GC tuning stays in user_jvm_args.txt, under your control (the pack ships
       # 5G max / 3G min, G1GC -- set those there).
@@ -233,19 +234,15 @@ let
     '';
   };
 
-  # Readiness reporter. Forked as a cgroup sibling of the JVM (see the launcher) so it can
-  # drive the unit's Type=notify state while java stays PID 1. The probe is RCON `list`:
-  # RCON commands execute on the server's MAIN thread, so a reply proves the server is
-  # actually ticking -- a strictly better signal than a log grep or a Server List Ping, both
-  # of which a deadlocked main thread can still satisfy. `timeout` is what keeps the probe
-  # from blocking forever: a wedged main thread still ACCEPTS the RCON connection but never
-  # replies, so mcrcon would hang without it.
-  #
-  # This reports; it does not enforce. Killing a hung server is Minecraft's job via
-  # max-tick-time (see the header), so nothing here arms a restart -- the phase 2 loop only
-  # keeps StatusText current for `systemctl status` / an SSH poke.
-  health = pkgs.writeShellApplication {
-    name = "craftoria-health";
+  # Readiness reporter, one-shot. Forked as a cgroup sibling of the JVM (see the launcher)
+  # so it can drive the unit's Type=notify state while java stays PID 1. The probe is RCON
+  # `list`: RCON commands execute on the server's MAIN thread, so a reply proves the server
+  # is actually ticking -- a strictly better signal than a log grep or a Server List Ping,
+  # both of which a deadlocked main thread can still satisfy. `timeout` is what keeps the
+  # probe from blocking forever: a wedged main thread still ACCEPTS the RCON connection but
+  # never replies, so mcrcon would hang without it.
+  ready = pkgs.writeShellApplication {
+    name = "craftoria-ready";
     runtimeInputs = with pkgs; [
       coreutils
       systemd
@@ -253,26 +250,16 @@ let
     text = ''
       probe() { timeout 10 ${rconConsole}/bin/craftoria-console list >/dev/null 2>&1; }
 
-      # Phase 1 -- wait for the first successful tick, then declare readiness. This is the
-      # part that earns its keep: it is what makes `activating` -> `active` mean "accepting
-      # players" instead of "execve returned", and it bounds a never-starting server at
-      # TimeoutStartSec.
+      # Wait for the first successful tick, report readiness, exit. That edge is the whole
+      # job: it makes `activating` -> `active` mean "accepting players" rather than "execve
+      # returned", and bounds a server that never comes up at TimeoutStartSec.
+      #
+      # Nothing polls after this on purpose. Hang detection is Minecraft's, via max-tick-time
+      # (see the header), and it reacts at 60s -- faster than any loop worth running here.
+      # A liveness loop would publish a status nobody acts on, keep two processes alive for
+      # the life of the server, and log an RCON connect every time it ran.
       until probe; do sleep 5; done
-      systemd-notify --ready --status="ticking (rcon responsive)"
-
-      # Phase 2 -- status only, and slow (120s) because nothing depends on its latency.
-      # Minecraft's watchdog reacts to a wedged tick at 60s regardless; this just leaves a
-      # human-readable breadcrumb in `systemctl status` for the window before that fires,
-      # and for the case where RCON is unreachable while ticks still land. Each probe costs
-      # a logged RCON connect server-side, so a tighter cadence would buy noise, not safety.
-      while true; do
-        if probe; then
-          systemd-notify --status="ticking (rcon responsive)"
-        else
-          systemd-notify --status="UNRESPONSIVE: rcon probe failing"
-        fi
-        sleep 120
-      done
+      systemd-notify --ready
     '';
   };
 
@@ -428,8 +415,8 @@ in
 
     serviceConfig = {
       # Type=notify: the unit stays "activating" through the multi-minute modpack load and
-      # only flips to "active" once craftoria-health (forked by the launcher) confirms the
-      # server is ticking and sends READY=1. NotifyAccess=all because that poller is a
+      # only flips to "active" once craftoria-ready (forked by the launcher) confirms the
+      # server is ticking and sends READY=1. NotifyAccess=all because that reporter is a
       # cgroup sibling, not the main PID. This is what makes `systemctl`/Beszel state honest
       # instead of reporting "started" at execve.
       Type = "notify";
@@ -457,7 +444,7 @@ in
       SuccessExitStatus = 143;
 
       # Modded startup is slow, and under Type=notify this bound is load-bearing: the unit
-      # fails if craftoria-health never reports READY=1 within it (server never came up).
+      # fails if craftoria-ready never reports READY=1 within it (server never came up).
       TimeoutStartSec = 1200;
       # No WatchdogSec on purpose -- see the header: Minecraft's max-tick-time watches the
       # same main thread, fires at 60s instead of 150s, and leaves a crash report instead of
