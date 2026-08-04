@@ -40,14 +40,35 @@
   # Reverse-proxy the Beszel hub onto the tailnet — same declarative pattern the
   # Cockpit setup used. `tailscale serve` state lives in a runtime file, not this
   # flake, so wrap it in a oneshot to re-establish the proxy on a clean reprovision.
-  # First provision only: this runs before `tailscale up` has authenticated the
-  # node, so it fails once — `systemctl restart tailscale-serve-beszel` after
-  # joining the tailnet, or just reboot.
   systemd.services.tailscale-serve-beszel = {
     description = "Expose Beszel hub (localhost:8090) over Tailscale HTTPS";
     after = [ "tailscaled.service" ];
     wants = [ "tailscaled.service" ];
     wantedBy = [ "multi-user.target" ];
+
+    # `After=tailscaled.service` is satisfied the moment tailscaled's Type=notify
+    # readiness fires, which only means its local API socket is up. `tailscale
+    # serve` additionally needs the ipn backend to have completed its control-plane
+    # login and reached `Running`; that lands ~1.5s later here, so this oneshot lost
+    # the race and died with "unexpected state: NoState" on every boot (a manual
+    # restart always worked, which is what made it look intermittent). The wait is
+    # generous because this host is on wifi — association and the login round trip
+    # can both be slow. On a never-authenticated node the state stays `NeedsLogin`
+    # and this fails after the timeout with that state named in the journal, which
+    # is the honest signal to go run `tailscale up`.
+    preStart = ''
+      for _ in $(seq 1 60); do
+        state=$(${pkgs.tailscale}/bin/tailscale status --json 2>/dev/null \
+          | ${pkgs.jq}/bin/jq -r '.BackendState // empty' 2>/dev/null) || true
+        if [ "$state" = "Running" ]; then
+          exit 0
+        fi
+        sleep 1
+      done
+      echo "tailscaled backend never reached Running (last state: ''${state:-unknown})" >&2
+      exit 1
+    '';
+
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
