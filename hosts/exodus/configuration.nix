@@ -17,6 +17,8 @@
     ./btrbk.nix
     # btrfs mount-time tuning (compress/noatime) + monthly autoScrub.
     ./btrfs.nix
+    # Disk swapfile: the low-priority overflow tier layered under zram.
+    ./swap.nix
     # Beszel metrics dashboard (hub + agent) exposed over Tailscale.
     ./beszel.nix
   ];
@@ -191,17 +193,18 @@
   # Provide a real dynamic linker at the FHS path so prebuilt/foreign binaries can run.
   programs.nix-ld.enable = true;
 
-  # Memory-pressure resilience. 14 GiB RAM, no disk swap (swapDevices = [] in the hardware
-  # scan), running a JVM Minecraft server (./craftoria.nix) alongside the desktop. With
-  # zero swap a memory spike can't evict anonymous pages, so the kernel thrashes /nix/store
-  # code pages and livelocks instead of OOM-killing — which is exactly how this box hard-
-  # froze once (progressive kwin/pipewire/libinput stalls → 31 s freeze → power cycle).
+  # Memory-pressure resilience. 14 GiB RAM running a JVM Minecraft server (./craftoria.nix)
+  # alongside the desktop. Originally this box had zero swap, so a memory spike couldn't
+  # evict anonymous pages: the kernel thrashed /nix/store code pages and livelocked instead
+  # of OOM-killing — which is exactly how it hard-froze once (progressive kwin/pipewire/
+  # libinput stalls → 31 s freeze → power cycle).
   #
-  # zram: compressed in-RAM swap so anon pages become reclaimable and the kernel/oomd can
-  # act cleanly. earlyoom: userspace backstop that SIGTERMs the biggest hog while there's
-  # still headroom, since the in-kernel OOM killer fires too late under this thrash pattern.
-  # A low-priority disk swapfile for genuine overflow capacity could be layered *under* zram
-  # later — deferred because a btrfs swapfile needs NOCOW + snapshot exclusion.
+  # Two swap tiers now (see ./swap.nix for the priority hierarchy). zram: compressed in-RAM
+  # swap (prio 5) so anon pages become reclaimable and the kernel/oomd can act cleanly — the
+  # first-wave headroom. A low-priority disk swapfile (prio -10) sits *under* it as genuine
+  # overflow capacity. earlyoom: userspace backstop that SIGTERMs the biggest hog while
+  # there's still headroom, since the in-kernel OOM killer fires too late under this thrash
+  # pattern.
   zramSwap = {
     enable = true;
     algorithm = "zstd";
