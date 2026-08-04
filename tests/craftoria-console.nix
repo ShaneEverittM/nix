@@ -46,9 +46,14 @@ pkgs.testers.runNixOSTest {
       # preflight, which would fail-fast on the missing pack/EULA.
       systemd.services.craftoria.serviceConfig = {
         ExecStartPre = lib.mkForce [ ];
+        # Readiness is normally reported by the RCON poller the launcher forks, which this
+        # stub replaces -- so the stub sends READY=1 itself to get the Type=notify unit to
+        # active. Nothing here is on a clock: the module sets no WatchdogSec (Minecraft's
+        # own max-tick-time owns hang detection), so the stub can sit idle indefinitely.
         ExecStart = lib.mkForce (
           pkgs.writeShellScript "craftoria-console-stub" ''
             echo "craftoria-console-stub up"
+            ${pkgs.systemd}/bin/systemd-notify --ready
             while IFS= read -r line; do
               printf 'got: %s\n' "$line" >> ${serverDir}/console.log
             done
