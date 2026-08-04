@@ -21,14 +21,25 @@
   # config/logs compress well too. Excluded by nature: the Craftoria `world` subvolume is
   # NOCOW (nodatacow implies no compression), so `-r` defragment must skip it or it'd be
   # forced back to CoW -- see the defragment caveat in the handoff notes.
-  fileSystems."/".options = [ "compress=zstd" ];
-  fileSystems."/home".options = [ "compress=zstd" ];
+  #
+  # discard=async is already the btrfs default on this kernel; it's pinned here so the
+  # mechanism that does the actual trimming is visible in the config rather than being an
+  # implicit default nothing records. See the trim note below.
+  fileSystems."/".options = [
+    "compress=zstd"
+    "discard=async"
+  ];
+  fileSystems."/home".options = [
+    "compress=zstd"
+    "discard=async"
+  ];
 
   # /nix additionally gets noatime: the store is read constantly and nix never consults
   # atime, so relatime's once-a-day atime write is pure churn here. Left /, /home on the
   # default relatime -- a few programs (mail clients, tmpwatch) still read atime there.
   fileSystems."/nix".options = [
     "compress=zstd"
+    "discard=async"
     "noatime"
   ];
 
@@ -39,6 +50,29 @@
     enable = true;
     interval = "monthly";
   };
+
+  # Trim: BOTH mechanisms, deliberately. They have different shapes --
+  #   discard=async  event-driven. Extents freed by a transaction commit are queued to a
+  #                  background kthread (not the commit path, unlike the old synchronous
+  #                  `discard`, which stalled). Does essentially all the real work here.
+  #   fstrim.timer   state-based weekly sweep. Walks the current free set, including the
+  #                  *unallocated* device space that isn't part of any chunk.
+  #
+  # The overlap is large and fstrim's marginal catch is small -- but the async queue lives
+  # in memory and does NOT survive unmount, so anything still backlogged at reboot is never
+  # discarded by it. fstrim is the backstop for that, and for anything freed under a mount
+  # that lacked discard. Cost is sub-second on this filesystem (free space is a handful of
+  # huge contiguous ranges, and DSM packs 256 per command), and Deallocate only updates FTL
+  # metadata -- it erases no NAND, so trimming more often costs no wear.
+  #
+  # Set explicitly even though true is the NixOS default: dropping it would leave trim
+  # depending entirely on a kernel default that appears nowhere, and if that ever changed
+  # the failure is silent -- no error, no log line, just write amplification months later.
+  # Redundancy that costs sub-second weekly is the cheap kind. Check the async side with
+  #   grep . /sys/fs/btrfs/754b89dd-16eb-4488-8c0c-96b7cf14e5b0/discard/*
+  # where discardable_bytes is the live backlog and discard_bytes_saved counts discards
+  # correctly skipped because the space got re-allocated first.
+  services.fstrim.enable = true;
 
   # compsize: shows actual on-disk vs. logical size per file/dir -- the way to confirm the
   # compress mount option + defragment actually took.
