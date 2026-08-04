@@ -4,12 +4,24 @@
 # as deferred. The two swaps are not redundant -- they're a hierarchy keyed on swap
 # priority (higher = drained first):
 #
-#   zram0     prio  5   compressed in-RAM swap. Absorbs the first spike, fast, but every
+#   zram0     prio 100  compressed in-RAM swap. Absorbs the first spike, fast, but every
 #                       page it holds still costs real RAM -- it's headroom, not capacity.
-#   swapfile  prio -10  disk-backed. Slow, but a *real* second reserve that frees RAM
+#   swapfile  prio  10  disk-backed. Slow, but a *real* second reserve that frees RAM
 #                       outright. The graceful-degradation tier: under sustained pressure
 #                       the box swaps to disk and gets slow instead of hitting a hard wall
 #                       the instant zram saturates.
+#
+# Both priorities are set explicitly, and both are POSITIVE. Negative priorities cannot be
+# requested at all: swapon(2) encodes priority in a 15-bit unsigned field gated by
+# SWAP_FLAG_PREFER, so swapon(8) accepts only 0..32767 and the kernel's own auto-assignment
+# is what produces the negative values you see in /proc/swaps. This module originally asked
+# for prio -10, which util-linux silently dropped -- no error, no journal warning -- leaving
+# the kernel to auto-assign -2 (its first auto value: the counter starts at -1 and
+# pre-decrements). The tiering still worked by luck, since -2 < 5, but nothing was actually
+# being requested. The gap between 100 and 10 leaves room to slot a tier between them.
+#
+# zram's priority is set in ./configuration.nix rather than defaulted, deliberately: half of
+# a documented hierarchy resting on a module default is how the above went unnoticed.
 #
 # Having a real reserve also un-breaks earlyoom's swap guard: with zram-only, "free swap"
 # tracked RAM the compressed store was already eating, so the threshold could gate itself
@@ -52,13 +64,14 @@
   };
 
   # 16 GiB: comfortably larger than RAM (14.5 GiB now, 32 GiB after the planned upgrade),
-  # so the overflow window survives the RAM bump without a resize. priority below zram's 5
+  # so the overflow window survives the RAM bump without a resize. priority below zram's 100
   # keeps it strictly the second tier -- the kernel only spills here once zram is full.
+  # Must stay in 0..32767; see the header on why negatives are silently ignored.
   swapDevices = [
     {
       device = "/swap/swapfile";
       size = 16 * 1024; # MiB
-      priority = -10;
+      priority = 10;
     }
   ];
 }

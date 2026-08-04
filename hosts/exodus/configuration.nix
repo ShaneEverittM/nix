@@ -200,15 +200,18 @@
   # libinput stalls → 31 s freeze → power cycle).
   #
   # Two swap tiers now (see ./swap.nix for the priority hierarchy). zram: compressed in-RAM
-  # swap (prio 5) so anon pages become reclaimable and the kernel/oomd can act cleanly — the
-  # first-wave headroom. A low-priority disk swapfile (prio -10) sits *under* it as genuine
-  # overflow capacity. earlyoom: userspace backstop that SIGTERMs the biggest hog while
-  # there's still headroom, since the in-kernel OOM killer fires too late under this thrash
-  # pattern.
+  # swap (prio 100) so anon pages become reclaimable and the kernel/oomd can act cleanly —
+  # the first-wave headroom. A lower-priority disk swapfile (prio 10) sits *under* it as
+  # genuine overflow capacity. earlyoom: userspace backstop that SIGTERMs the biggest hog
+  # while there's still headroom, since the in-kernel OOM killer fires too late under this
+  # thrash pattern.
   zramSwap = {
     enable = true;
     algorithm = "zstd";
     memoryPercent = 100; # max device size; compression means real RAM used is well under this
+    # Explicit rather than left at the module default (5), so both tiers of the hierarchy in
+    # ./swap.nix are stated in-tree. Swap priorities must be 0..32767 — see ./swap.nix.
+    priority = 100;
   };
 
   services.earlyoom = {
