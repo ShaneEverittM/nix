@@ -14,7 +14,7 @@
 #
 # The world is no longer greenfield -- there is a live world worth keeping now, which is
 # why the readiness work below leans on *clean* SIGTERM saves, and why the world reset
-# ritual (below) and the btrfs snapshots (see btrbk.nix) matter.
+# ritual (below) and the quiesced btrfs snapshots (see btrbk.nix) matter.
 #
 # Hang protection is deliberately NOT done here: Minecraft ships its own watchdog
 # (max-tick-time in server.properties, 60s), which monitors the same main server thread a
@@ -193,6 +193,10 @@ let
   # in the firewall allow-list, so it is reachable on loopback only. Keep it that way.
   #     craftoria-console          # interactive prompt
   #     craftoria-console list     # one-shot command: prints the reply and exits
+  # mcrcon runs each ARGUMENT as its own rcon command, so a multi-word command must be a
+  # single quoted word or it silently becomes several commands:
+  #     craftoria-console 'save-all flush'    # right
+  #     craftoria-console save-all flush      # WRONG: `save-all`, then a bogus `flush`
   rconConsole = pkgs.writeShellApplication {
     name = "craftoria-console";
     runtimeInputs = with pkgs; [
@@ -272,6 +276,88 @@ let
     '';
   };
 
+  # Quiesce the world for the duration of a btrbk run. A btrfs snapshot is atomic, so an
+  # un-quiesced one is *crash-consistent*: restoring it is equivalent to restoring from a
+  # kill -9, with chunks still live in the JVM heap and .mca regions half-written.
+  # `save-off` + `save-all flush` turns that into a real checkpoint.
+  #
+  # This hangs off btrbk-local.service (defined in ./btrbk.nix) rather than being a helper
+  # run by hand, because the weekly timer fires that same unit -- so the scheduled snapshots
+  # get the identical treatment. btrbk has no native pre/post-snapshot hooks (only the
+  # --preserve* flags affect a run), so systemd's Exec hooks are the seam.
+  #
+  # Caveat: the window spans the WHOLE btrbk run, retention deletes included, not just the
+  # snapshot ioctl. Deletes are fast and this host snapshots two subvolumes, so it is
+  # seconds -- but it is autosave-off seconds, and a crash inside it loses more than a
+  # crash outside it would.
+  snapshotSaves = pkgs.writeShellApplication {
+    name = "craftoria-snapshot-saves";
+    runtimeInputs = with pkgs; [
+      coreutils
+      gnugrep
+      systemd
+    ];
+    text = ''
+      mode="''${1:?usage: craftoria-snapshot-saves freeze|thaw}"
+
+      # Never fail the btrbk run. home still needs its snapshot even when the server is down
+      # or RCON is wedged, and a stopped server has already flushed on SIGTERM -- so a
+      # missing server is a no-op, not an error. Every path below exits 0 on purpose.
+      if ! systemctl is-active --quiet craftoria; then
+        echo "craftoria not active -- world already at rest, skipping $mode"
+        exit 0
+      fi
+
+      # mcrcon exits 0 whenever RCON *accepted* the line, so an in-game "Unknown command"
+      # still looks like success (verified: `craftoria-console tps` returns 0). Match the
+      # server's reply text instead of $?, or these hooks would silently do nothing.
+      #
+      # Rejecting the parser error explicitly, on top of matching $want, is not redundant:
+      # it is what catches a command that got MANGLED rather than refused. `save-all flush`
+      # sent as two argv words ran `save-all` + `flush`, and the bare `save-all` still
+      # printed "Saved the game" -- so $want matched while the flush silently never
+      # happened. A $want match is not proof the command you meant is the command that ran.
+      say() {
+        want="$1"
+        shift
+        out="$(timeout 30 ${rconConsole}/bin/craftoria-console "$@" 2>&1)" || out="<rcon call failed>"
+        printf '  %s -> %s\n' "$*" "$out"
+        if printf '%s' "$out" | grep -qiF 'Unknown or incomplete command'; then
+          return 1
+        fi
+        printf '%s' "$out" | grep -qiE "$want"
+      }
+
+      case "$mode" in
+        freeze)
+          # save-off first so autosave cannot race the flush. A failure here only downgrades
+          # the snapshot to crash-consistent -- today's status quo -- so warn and let btrbk
+          # run anyway: a degraded backup beats a skipped one.
+          say 'disabled|already turned off' save-off ||
+            echo "WARNING: save-off did not take -- snapshot will be crash-consistent"
+          # ONE argv word. mcrcon runs each argument as a SEPARATE rcon command, so
+          # `save-all flush` unquoted is `save-all` then a bogus `flush` -- you get an
+          # ordinary save, not the forced synchronous flush this hook exists for.
+          say 'Saved the game' 'save-all flush' ||
+            echo "WARNING: save-all flush did not take -- snapshot will be crash-consistent"
+          ;;
+        thaw)
+          # ExecStopPost, so this runs even when btrbk fails or is interrupted. Leaving
+          # autosave off until the next restart is far worse than a failed snapshot -- it
+          # silently widens every subsequent crash into hours of lost world -- so retry
+          # before giving up, and give up LOUDLY.
+          for _ in 1 2 3; do
+            if say 'enabled|already turned on' save-on; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "ERROR: autosave still off -- run 'craftoria-console save-on' by hand NOW"
+          ;;
+      esac
+      exit 0
+    '';
+  };
 in
 {
   # ---- host prerequisites, declarative ---------------------------------------
@@ -459,5 +545,20 @@ in
       # cpuinfo the JVM reads for ergonomics), MemoryMax (a too-tight ceiling gives
       # OOM kills that mimic a crash -- leave it to -Xmx in user_jvm_args.txt).
     };
+  };
+
+  # ---- clean snapshots -------------------------------------------------------
+  # Extends the unit generated by services.btrbk.instances.local in ./btrbk.nix. Living
+  # here, not there, keeps the RCON plumbing next to the console/probe that share it; the
+  # coupling is one-directional and ./btrbk.nix carries a pointer back.
+  #
+  # `+` runs these as root: btrbk-local.service is User=btrbk, which cannot traverse
+  # /home/shane to read rcon.password out of server.properties.
+  #
+  # ExecStopPost (not ExecStop) because it must also run when btrbk fails or is killed --
+  # that is the whole reason the thaw is a systemd hook instead of a line in a script.
+  systemd.services.btrbk-local.serviceConfig = {
+    ExecStartPre = "+${snapshotSaves}/bin/craftoria-snapshot-saves freeze";
+    ExecStopPost = "+${snapshotSaves}/bin/craftoria-snapshot-saves thaw";
   };
 }

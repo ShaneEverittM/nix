@@ -11,6 +11,11 @@
 # each block after a snapshot is forced back to CoW, so weekly (not a tight timer) keeps
 # that cost small.
 #
+# ./craftoria.nix adds ExecStartPre/ExecStopPost to the btrbk-local unit this generates,
+# to quiesce the Minecraft server (save-off + save-all flush) around the run -- otherwise
+# the world snapshot is only crash-consistent. Look there before debugging a btrbk-local
+# failure, and note that it runs for the manual `systemctl start btrbk-local` too.
+#
 # NOT snapshotted: /nix (snapshots would pin store paths and defeat nix-collect-garbage)
 # and / (subvolid=5, not snapshottable). Both are already separate subvolumes, so this is
 # free.
