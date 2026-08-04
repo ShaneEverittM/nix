@@ -174,6 +174,49 @@ First-boot setup (not Nix-managed):
    (`${pkgs._1password-gui}/share/1password/op-ssh-sign`, set as
    `publicHome.git.sshSigningProgram`) — verify the binary is present on first run.
 
+**Filesystem (btrfs on a single 1.8 TB NVMe).** One pool on `/dev/nvme0n1p2` with a
+separate 1 GB vfat ESP at `/boot`. Three mounted subvolumes: the root **is the top level**
+(`subvolid=5`), plus `home` and `nix`. Two more exist but aren't mounted as such —
+`/.snapshots` (btrbk's target) and the Craftoria world.
+
+Root on `subvolid=5` is **deliberate**, not a missed step. It costs rootfs snapshot and
+rollback, which is accepted: NixOS generations already cover config and package rollback,
+and converting to an `@`-style layout is a live-ISO chore. The residual gap is service
+state under `/var/lib`, which a generation rollback does *not* revert — a service that
+migrates its on-disk format on upgrade can end up as old code against new data. Give those
+their own subvolume with a `systemd.tmpfiles` `v` rule (`v /var/lib/foo 0750 foo foo -` —
+subvolume where supported, plain directory otherwise; it only acts when the path doesn't
+already exist, so it will not convert a directory that's already there). Not worth it for
+services that only read config and write logs.
+
+`hosts/exodus/btrfs.nix` holds the mount-time and maintenance half: `compress=zstd`
+everywhere, `noatime` additionally on `/nix`, and a monthly scrub. Mount options apply to
+new writes only and `nixos-rebuild switch` does not remount a live root — they land on the
+next **reboot**, and a one-shot `btrfs filesystem defragment -czstd -r` is what recompresses
+what's already on disk. `compsize` (installed) confirms it took. Metadata is `DUP`, so a
+scrub self-heals metadata corruption; data is `single`, so scrub *detects* rot there but
+cannot repair it. Early warning, not redundancy.
+
+**The Minecraft world is its own NOCOW subvolume** (`world/` under the server dir in
+`hosts/exodus/craftoria.nix`) — `.mca` region files are rewritten in place and fragment
+badly under CoW. Scoped to `world/` alone and not the whole server tree on purpose: NOCOW
+files are neither compressed nor checksummed, and the ~500 MB pack tree is static and
+highly compressible, so it stays an ordinary CoW directory. It was created greenfield,
+which matters — `chattr +C` must land on an *empty* subvolume, since NOCOW is inherited
+only by files created afterward. **Resetting the world is therefore not `rm -rf world`**:
+that either fails on the subvolume or removes it outright, and a reflexive `mkdir world`
+hands back a CoW directory with no error at all. The ritual (`subvolume delete` →
+`subvolume create` → `chattr +C`) is spelled out next to `serverDir`.
+
+`hosts/exodus/btrbk.nix` does weekly timeline snapshots into `/.snapshots`. `home` and the
+world are listed **separately** because btrfs snapshots aren't recursive — without that
+second line the world would be silently skipped, which is the entire point of having given
+it a subvolume. `craftoria.nix` hooks the generated `btrbk-local` unit to quiesce the
+server (`save-off` + `save-all`) around the run, so the world snapshot is consistent rather
+than merely crash-consistent. Not snapshotted: `/nix` (snapshots pin store paths and would
+defeat `nix-collect-garbage`) and `/` (subvolid=5). Snapshots on one disk are not a backup
+— the off-box `btrfs send -p` half is deferred until there's a target host.
+
 **GPU (dual-GPU box).** Monitors are wired to the NVIDIA card (Turing RTX 2070 SUPER,
 PCI `01:00.0`); the AMD Raphael iGPU (`0f:00.0`) stays on `amdgpu` but drives no display.
 `hosts/exodus/configuration.nix` makes NVIDIA the primary driver — proprietary kernel
