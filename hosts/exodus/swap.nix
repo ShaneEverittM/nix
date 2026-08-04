@@ -31,16 +31,22 @@
 #   sudo btrfs subvolume create /swap        # top-level (subvolid=5) is mounted at /
 # then `nixos-rebuild switch`. The mount + mkswapfile + swapon come up on the next boot.
 {
-  # Dedicated, never-snapshotted subvolume for the swapfile. nodatacow at the mount makes
-  # every file here NOCOW (belt-and-suspenders with mkswapfile's per-file +C); it also
-  # drops compression + checksums, which swap neither needs nor tolerates. noatime because
-  # a swapfile has no meaningful atime. Same pool as / (uuid 754b89dd…, see ./btrfs.nix).
+  # Dedicated, never-snapshotted subvolume for the swapfile. noatime because a swapfile has
+  # no meaningful atime. Same pool as / (uuid 754b89dd…, see ./btrfs.nix).
+  #
+  # Deliberately NOT `nodatacow` here, however much it looks like it belongs: btrfs applies
+  # compress/datacow per *filesystem*, not per subvolume. / mounts this pool first with
+  # `compress=zstd:3` + datacow, so this mount inherits that and silently ignores any
+  # contrary option -- confirmed with `findmnt /swap`. Listing it would only imply a
+  # guarantee the mount does not provide. The NOCOW that swap genuinely requires comes
+  # solely from mkswapfile's per-file +C (`lsattr /swap/swapfile` shows the C flag), and
+  # NOCOW is in turn what drops compression + checksums, which swap neither needs nor
+  # tolerates. Nothing at the mount layer backstops that.
   fileSystems."/swap" = {
     device = "/dev/disk/by-uuid/754b89dd-16eb-4488-8c0c-96b7cf14e5b0";
     fsType = "btrfs";
     options = [
       "subvol=swap"
-      "nodatacow"
       "noatime"
     ];
   };
