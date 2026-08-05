@@ -1,5 +1,5 @@
 {
-  description = "Platform-agnostic Nix config: NixOS-WSL system + standalone home-manager for Linux/macOS";
+  description = "Platform-agnostic Nix config: NixOS hosts (WSL, desktop, home server) + standalone home-manager for macOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -36,6 +36,13 @@
       # switch`). Formerly a standalone home-manager config on CachyOS; now full NixOS
       # with home-manager folded in (see hosts/exodus/default.nix).
       nixosConfigurations.exodus = import ./hosts/exodus/default.nix {
+        inherit inputs;
+        system = "x86_64-linux";
+      };
+      # Headless home server (repurposed laptop) — `nixos-rebuild switch --flake
+      # .#rebirth` (or `nh os switch`). Folded in from the formerly standalone
+      # nix-server repo (see hosts/rebirth/default.nix).
+      nixosConfigurations.rebirth = import ./hosts/rebirth/default.nix {
         inherit inputs;
         system = "x86_64-linux";
       };

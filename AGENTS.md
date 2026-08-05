@@ -8,12 +8,13 @@ This is a public, platform-agnostic Nix flake for Shane's personal machines:
 
 - `nixosConfigurations.nixos`: NixOS-on-WSL system for user `shane`.
 - `nixosConfigurations.exodus`: bare-metal NixOS KDE Plasma desktop, with home-manager folded in as a module (like the WSL host).
+- `nixosConfigurations.rebirth`: headless NixOS home server (repurposed laptop), home-manager folded in but importing only the git module.
 - `homeConfigurations."shane@macbook"` and `homeConfigurations.shane`: standalone home-manager for a personal macOS machine.
 - `homeModules.*` and `nixosModules.*`: reusable public modules consumed by a separate private work-Mac repo.
 
 "Linux" in this repo means **any** Linux host. WSL-specific things go in the `wsl`
 modules, not the `linux` ones; non-NixOS distro workarounds go in `generic-linux.nix`,
-which must never reach a NixOS host. Both Linux hosts (WSL and exodus) now run NixOS, so
+which must never reach a NixOS host. All Linux hosts (WSL, exodus, rebirth) run NixOS, so
 `generic-linux.nix` currently has no in-repo consumer — it stays exported via
 `homeModules.genericLinux` for downstream non-NixOS Linux use.
 
@@ -29,6 +30,9 @@ Keep this repo safe to publish. Do not add secrets, work-internal settings, toke
 | `hosts/exodus/default.nix` | `exodus` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop). |
 | `hosts/exodus/configuration.nix` | `exodus` system layer: KDE Plasma, PipeWire, users, unfree allowance, zsh login shell. |
 | `hosts/exodus/hardware-configuration.nix` | `exodus` generated hardware scan (filesystems, kernel modules). |
+| `hosts/rebirth/default.nix` | `rebirth` headless home-server assembly. Folds home-manager in (git module only). |
+| `hosts/rebirth/configuration.nix` | `rebirth` system layer: Wi-Fi (wpa_supplicant), avahi, openssh, lid-switch, zram. |
+| `hosts/rebirth/hardware-configuration.nix` | `rebirth` generated hardware scan (filesystems, kernel modules). |
 | `modules/home/default.nix` | Universal home-manager core bundle. |
 | `modules/home/common.nix` | Owns the `publicHome.*` option namespace and shared cross-host config. |
 | `modules/home/{git,shell,rust,bun}.nix` | Shared home-manager behavior imported everywhere. |
@@ -76,6 +80,7 @@ The `README.md` has the detailed human-facing explanation. Use this file for qui
 | Add NixOS behavior for every NixOS host | `modules/nixos/common.nix` |
 | Add WSL-only system behavior | `modules/nixos/wsl.nix` |
 | Add exodus-only system behavior | `hosts/exodus/configuration.nix` |
+| Add rebirth-only system behavior | `hosts/rebirth/configuration.nix` |
 | Add WSL home behavior | `modules/home/wsl.nix` or an imported WSL-only module |
 | Add behavior for every Linux host | `modules/home/linux.nix` |
 | Add a non-NixOS distro workaround | `modules/home/generic-linux.nix` |
@@ -99,6 +104,7 @@ nix flake check --all-systems --no-build --no-write-lock-file --show-trace
 # Optional targeted host evaluations.
 nix eval .#nixosConfigurations.nixos.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#nixosConfigurations.exodus.config.system.build.toplevel.drvPath --no-write-lock-file
+nix eval .#nixosConfigurations.rebirth.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#homeConfigurations."shane@macbook".activationPackage.drvPath --no-write-lock-file
 ```
 

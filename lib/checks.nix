@@ -7,7 +7,7 @@
 # aarch64-darwin (Darwin home activations); together they cover every target.
 #
 #   Every system : nixfmt / deadnix / statix lint gates (source-only, cheap).
-#   x86_64-linux : both NixOS toplevels (exodus desktop + WSL) actually build — this is
+#   x86_64-linux : all NixOS toplevels (exodus desktop + WSL + rebirth server) build — this is
 #                  what catches build-time breakage that pure eval misses, e.g. a wrong
 #                  Warp AppImage hash or a broken substituteInPlace.
 #   aarch64-darwin: the personal macbook home activation, plus `downstream` — a standalone
@@ -38,9 +38,12 @@ let
       config = nixpkgsConfig;
     };
 
-  # Generated hardware scan — we don't own its formatting, so keep it out of the
+  # Generated hardware scans — we don't own their formatting, so keep them out of the
   # source-hygiene gates.
-  generated = "./hosts/exodus/hardware-configuration.nix";
+  generated = [
+    "./hosts/exodus/hardware-configuration.nix"
+    "./hosts/rebirth/hardware-configuration.nix"
+  ];
 
   # Source-hygiene checks run against the flake source in the store (${self}), which is
   # the clean git tree (no .git), so we enumerate with `find`, not `git ls-files`.
@@ -52,13 +55,15 @@ let
     {
       nixfmt = pkgs.runCommandLocal "check-nixfmt" { nativeBuildInputs = [ pkgs.nixfmt ]; } ''
         cd ${self}
-        nixfmt --check $(find . -name '*.nix' -not -path '${generated}')
+        nixfmt --check $(find . -name '*.nix' ${
+          lib.concatMapStringsSep " " (p: "-not -path '${p}'") generated
+        })
         touch $out
       '';
 
       deadnix = pkgs.runCommandLocal "check-deadnix" { nativeBuildInputs = [ pkgs.deadnix ]; } ''
         cd ${self}
-        deadnix --fail --exclude '${generated}' .
+        deadnix --fail ${lib.concatMapStringsSep " " (p: "--exclude '${p}'") generated} .
         touch $out
       '';
 
@@ -95,6 +100,7 @@ let
       x86_64-linux = {
         exodus-toplevel = self.nixosConfigurations.exodus.config.system.build.toplevel;
         wsl-toplevel = self.nixosConfigurations.nixos.config.system.build.toplevel;
+        rebirth-toplevel = self.nixosConfigurations.rebirth.config.system.build.toplevel;
 
         # Boots a VM and smoke-tests the craftoria console plumbing (FIFO socket +
         # sandboxing) with a stand-in for the un-CI-able NeoForge server. NixOS VM tests
