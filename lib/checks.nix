@@ -69,16 +69,35 @@ let
 
       statix = pkgs.runCommandLocal "check-statix" { nativeBuildInputs = [ pkgs.statix ]; } ''
         cd ${self}
-        statix check .
+        # -i takes glob patterns matched per-file; one basename glob covers every
+        # generated hardware scan (the same files `generated` lists by path).
+        statix check . -i 'hardware-configuration.nix'
+        touch $out
+      '';
+
+      # The exported home modules must never SET a nix.* option: the downstream work
+      # Mac runs Determinate Nix, which owns Nix's own config (see the header of
+      # modules/home/common.nix). Comment-only mentions are fine; this greps for
+      # non-comment lines that assign under the nix.* namespace.
+      home-nix-free = pkgs.runCommandLocal "check-home-nix-free" { } ''
+        cd ${self}
+        if grep -rnE '^[^#]*\bnix\.[a-z]' modules/home; then
+          echo 'nix.* setting found in modules/home — this breaks the Determinate-Nix downstream consumer' >&2
+          exit 1
+        fi
         touch $out
       '';
     };
 
   # Standalone home-manager config built purely from the exported homeModules, the way
-  # the downstream work-Mac flake consumes them. outOfStore is the real-world mode, and
-  # its symlink targets need not exist at build time, so no repo checkout is required.
+  # the downstream work-Mac flake consumes them. Two flavors: `downstream` mirrors the
+  # real work-Mac shape (outOfStore dotfiles, whose symlink targets need not exist at
+  # build time, so no repo checkout is required); `downstream-store` exercises the
+  # downstream-only knobs nothing else ever sets — store-mode dotfiles, a custom
+  # repoRoot/homeFlake, a cargo-registry overlay, and an own stateVersion (proving the
+  # bundle's mkDefault contract holds).
   downstreamHome =
-    system:
+    system: extraModule:
     (home-manager.lib.homeManagerConfiguration {
       pkgs = pkgsFor system;
       extraSpecialArgs = {
@@ -91,8 +110,19 @@ let
           publicHome.git.userName = "CI Downstream";
           publicHome.git.userEmail = "ci@example.com";
         }
+        extraModule
       ];
     }).activationPackage;
+
+  downstreamStoreModule = {
+    publicHome.dotfiles.mode = "store";
+    publicHome.repoRoot = "/opt/ci/downstream-flake";
+    publicHome.nh.homeFlake = "/opt/ci/downstream-flake";
+    publicHome.rust.extraCargoConfig = {
+      registries.ci-private.index = "sparse+https://registry.example.com/index/";
+    };
+    home.stateVersion = "26.05";
+  };
 
   buildChecks =
     system:
@@ -108,7 +138,8 @@ let
       };
       aarch64-darwin = {
         macbook = self.homeConfigurations."shane@macbook".activationPackage;
-        downstream = downstreamHome system;
+        downstream = downstreamHome system { };
+        downstream-store = downstreamHome system downstreamStoreModule;
       };
     }
     .${system} or { };

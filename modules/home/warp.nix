@@ -101,6 +101,16 @@ in
       description = "Warp package source to install through Home Manager.";
     };
 
+    # Typed front door for the `warpPackages` module argument (kept as the default for
+    # backward compatibility with consumers passing it via extraSpecialArgs). The
+    # assertion below turns the old attribute-missing eval error into a legible one.
+    packages = lib.mkOption {
+      type = lib.types.attrsOf lib.types.package;
+      default = warpPackages;
+      defaultText = lib.literalExpression "warpPackages (module argument)";
+      description = "Warp packages selectable via packageSource, keyed by source name.";
+    };
+
     settings = lib.mkOption {
       type = lib.types.attrs;
       default = { };
@@ -109,7 +119,17 @@ in
   };
 
   config = {
-    home.packages = lib.optional (cfg.packageSource != "none") warpPackages.${cfg.packageSource};
+    assertions = [
+      {
+        assertion = cfg.packageSource == "none" || cfg.packages ? ${cfg.packageSource};
+        message = ''
+          programs.warp.packageSource = "${cfg.packageSource}" needs a matching entry in
+          programs.warp.packages (or the warpPackages extraSpecialArgs argument).
+        '';
+      }
+    ];
+
+    home.packages = lib.optional (cfg.packageSource != "none") cfg.packages.${cfg.packageSource};
 
     # Each `nh home switch` rebuilds the .app at a fresh /nix/store path, but macOS
     # keeps the icon keyed to the old path, so Finder/Dock fall back to a generic
