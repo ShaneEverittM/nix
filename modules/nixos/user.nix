@@ -22,10 +22,7 @@ in
   users.users.${identity.username} = {
     isNormalUser = true;
     description = identity.userName;
-    extraGroups = [
-      "networkmanager"
-      "wheel"
-    ];
+    extraGroups = [ "wheel" ];
     shell = pkgs.zsh;
     # SSH in with the 1Password-held key (same key everywhere, incl. commit signing).
     openssh.authorizedKeys.keys = [ identity.sshPublicKey ];

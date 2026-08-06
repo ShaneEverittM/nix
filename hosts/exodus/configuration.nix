@@ -15,8 +15,6 @@
     ./craftoria.nix
     # btrbk: weekly local snapshots of home + the Craftoria world subvolume.
     ./btrbk.nix
-    # btrfs mount-time tuning (compress/noatime) + monthly autoScrub.
-    ./btrfs.nix
     # Disk swapfile: the low-priority overflow tier layered under zram.
     ./swap.nix
     # Beszel metrics dashboard (hub + agent) exposed over Tailscale.
@@ -92,22 +90,22 @@
     binfmt = true;
   };
 
-  # Desktop-only extras on the shared shane account (modules/nixos/common.nix owns the
-  # account itself).
-  users.users."shane".packages = with pkgs; [
-    kdePackages.kate
-  ];
+  # Desktop-only extras on the shared shane account (modules/nixos/user.nix owns the
+  # account itself): kate, plus the networkmanager group — NM is this desktop's network
+  # stack (rebirth uses wpa_supplicant), so the group membership lives here rather than
+  # in the shared user.
+  users.users."shane" = {
+    extraGroups = [ "networkmanager" ];
+    packages = with pkgs; [
+      kdePackages.kate
+    ];
+  };
 
   # Advertise as a workstation on mDNS, on top of the shared avahi publish config.
   services.avahi.publish.workstation = true;
 
   # Install firefox.
   programs.firefox.enable = true;
-
-  # System profile packages (dev apps live in home.packages; see ./default.nix).
-  environment.systemPackages = with pkgs; [
-    vim
-  ];
 
   # Memory-pressure resilience. 14 GiB RAM running a JVM Minecraft server (./craftoria.nix)
   # alongside the desktop. Originally this box had zero swap, so a memory spike couldn't
@@ -121,8 +119,9 @@
   # genuine overflow capacity. earlyoom: userspace backstop that SIGTERMs the biggest hog
   # while there's still headroom, since the in-kernel OOM killer fires too late under this
   # thrash pattern.
+  # (zramSwap.enable + earlyoom.enable come from the shared memory.nix baseline;
+  # this host states the tuning.)
   zramSwap = {
-    enable = true;
     algorithm = "zstd";
     memoryPercent = 100; # max device size; compression means real RAM used is well under this
     # Explicit rather than left at the module default (5), so both tiers of the hierarchy in
@@ -131,7 +130,6 @@
   };
 
   services.earlyoom = {
-    enable = true;
     # Act before the machine livelocks: kill when free RAM *and* free swap (zram) both fall
     # below these. Low RAM threshold leans on zram absorbing the first wave; the swap
     # threshold catches zram itself filling up.

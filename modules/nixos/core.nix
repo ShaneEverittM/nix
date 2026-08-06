@@ -16,9 +16,14 @@ in
     "flakes"
   ];
 
-  # git must be available system-wide: nix needs it to read this git-based
-  # flake on every `nixos-rebuild` (which runs as root via sudo).
-  environment.systemPackages = with pkgs; [ git ];
+  # git must be available system-wide: nix needs it to read this git-based flake on
+  # every `nixos-rebuild` (which runs as root via sudo). neovim is the shared
+  # bootstrap/root editor (usable before any home config exists, e.g. from a rescue
+  # shell or sudo).
+  environment.systemPackages = with pkgs; [
+    git
+    neovim
+  ];
 
   # Pin `<nixpkgs>` and `<home-manager>` to this flake's inputs so
   # channel-based tools (manix's option-doc search) can index both

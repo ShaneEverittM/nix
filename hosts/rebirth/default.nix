@@ -33,9 +33,6 @@ inputs.nixpkgs.lib.nixosSystem {
           # workstation concerns.
           home.packages = import ../../lib/packages.nix pkgs;
 
-          # The shared module signs commits; also sign tags.
-          programs.git.settings.tag.gpgsign = true;
-
           # Home-manager's compatibility anchor, same idea as system.stateVersion.
           home.stateVersion = "26.05";
         };

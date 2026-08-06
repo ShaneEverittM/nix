@@ -12,6 +12,8 @@
     ./core.nix # nix settings, boot, locale, base tooling, nh
     ./user.nix # shane account + the home-manager fold-in with identity
     ./ssh.nix # hardened key-only sshd
-    ./network.nix # avahi mDNS + tailscale
+    ./network.nix # avahi mDNS + tailscale + resolved
+    ./memory.nix # zram + earlyoom baseline
+    ./btrfs.nix # compression/scrub/trim for the identical btrfs layouts
   ];
 }
