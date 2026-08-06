@@ -1,9 +1,9 @@
 # Shared Warp settings schema, generated from Nix. Platform-agnostic: the only
 # OS-specific input is `themeDir` (where the custom theme YAMLs live on the target
 # OS, as a path Warp itself understands), plus optional `overrides` deep-merged on
-# top. Consumed by warp.nix (macOS, ~/.warp{,-oss}/themes) and warp-wsl.nix
-# (Windows-side, %APPDATA%\warp\Warp\data\themes). Keeping the big attrset here
-# means both platforms share one source of truth for the Warp profile.
+# top. Consumed by warp.nix (macOS ~/.warp{,-oss}/themes; Linux XDG paths). Keeping
+# the big attrset here means every platform shares one source of truth for the Warp
+# profile.
 { lib }:
 {
   themeDir,

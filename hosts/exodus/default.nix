@@ -1,7 +1,7 @@
-# NixOS desktop assembly: the `nixosConfigurations.exodus` system. Structurally the
-# twin of hosts/wsl/default.nix — a NixOS system with home-manager folded in as a
-# module — but for a bare-metal KDE desktop instead of WSL. Formerly a standalone
-# home-manager config on CachyOS (see git history); now Nix owns the whole box.
+# NixOS desktop assembly: the `nixosConfigurations.exodus` system — NixOS with
+# home-manager folded in as a module, for a bare-metal KDE desktop. Formerly a
+# standalone home-manager config on CachyOS (see git history); now Nix owns the
+# whole box.
 #
 # The home layer imports the shared core + linux.nix + desktop.nix (GUI dotfiles), but
 # NOT generic-linux.nix: that module's non-NixOS fixups (XDG_DATA_DIRS, LOCALE_ARCHIVE)
@@ -29,13 +29,12 @@ inputs.nixpkgs.lib.nixosSystem {
   specialArgs = { inherit inputs; };
 
   modules = [
-    inputs.home-manager.nixosModules.home-manager
     ./configuration.nix
+    # Shared physical-host base: boot, locale, users, sshd, tailscale, nh, and the
+    # home-manager fold-in with the personal identity (see modules/nixos/common.nix).
     ../../modules/nixos/common.nix
     {
       home-manager.extraSpecialArgs = { inherit pkgsUnstable; };
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
       home-manager.users.shane =
         {
           pkgs,
@@ -45,24 +44,19 @@ inputs.nixpkgs.lib.nixosSystem {
         {
           imports = [
             ../../modules/home # core bundle (common + git + shell + rust + bun)
-            ../../modules/home/linux.nix # shared Linux layer (no Windows/WSL bits)
+            ../../modules/home/linux.nix # shared Linux layer
             ../../modules/home/desktop.nix # GUI dotfiles (vscode + zed + warp + jetbrains)
             ./cider.nix # launcher entry for the out-of-store Cider AppImage
           ];
 
-          # Personal git identity (already public). The work Mac sets its own in the
-          # private nix-work repo.
-          publicHome.git.userName = "Shane Murphy";
-          publicHome.git.userEmail = "mail@semurphy.com";
-
-          # Commit signing via the 1Password SSH key (same key as WSL and the Mac). On
-          # NixOS the signer ships inside the Nix-built 1Password GUI package rather than
-          # at CachyOS's /opt/1Password/op-ssh-sign, so point at the store path.
-          publicHome.git.signingKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3";
+          # Identity (name/email/signing key) comes from the shared base. The signer
+          # program is host-specific: on NixOS it ships inside the Nix-built 1Password
+          # GUI package rather than at CachyOS's /opt/1Password/op-ssh-sign, so point
+          # at the store path.
           publicHome.git.sshSigningProgram = "${pkgs._1password-gui}/share/1password/op-ssh-sign";
 
-          # The Linux 1Password app exposes the agent natively (no WSL-style relay);
-          # sshAuthSock already defaults to the ~/.1password/agent.sock it creates.
+          # The Linux 1Password app exposes the agent natively; sshAuthSock already
+          # defaults to the ~/.1password/agent.sock it creates.
           # Enable the agent socket in 1Password → Settings → Developer on first boot.
           publicHome.onepassword.sshAgent = true;
 
@@ -72,8 +66,7 @@ inputs.nixpkgs.lib.nixosSystem {
           # opened by hand. `--silent` is 1Password's own start-minimized flag (what its
           # "Start at login" setting writes). Lives here, not in the cross-platform
           # onepassword.nix, because the Nix GUI + tray autostart is specific to this
-          # bare-metal desktop (WSL relays the agent from Windows; the Macs use native
-          # login items).
+          # bare-metal desktop (the Macs use native login items).
           #
           # A native systemd user service, NOT an XDG autostart .desktop: the .desktop
           # becomes a *generated* unit with no [Service] control, and 1Password is
@@ -157,14 +150,6 @@ inputs.nixpkgs.lib.nixosSystem {
               pkgsUnstable.zed-editor
             ];
         };
-
-      # Enable the NixOS-side nh so `nh os switch`/`nh os boot` work without a flake
-      # path. NH_OS_FLAKE mirrors the home side's NH_HOME_FLAKE: both point at this
-      # repo's checkout (publicHome.repoRoot defaults to ~/.config/nix).
-      programs.nh = {
-        enable = true;
-        flake = "/home/shane/.config/nix";
-      };
     }
   ];
 }

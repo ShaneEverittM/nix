@@ -2,7 +2,7 @@
 # lib/packages.nix (eza/bat) and zoxide.
 #
 # zsh is the interactive shell everywhere, but only NixOS can set the login shell
-# declaratively (modules/nixos/wsl.nix). macOS already defaults to zsh; on a non-NixOS
+# declaratively (modules/nixos/common.nix). macOS already defaults to zsh; on a non-NixOS
 # Linux distro the distro owns /etc/passwd, so it takes a one-time `chsh` (see the host
 # setup section of the README).
 {
@@ -15,7 +15,7 @@ let
   # Auto-Warpify hook: emit the SourcedRcFileForWarp control sequence on every
   # interactive shell so Warp warpifies subshells automatically (nix develop,
   # nested zsh/bash, etc.). Guarded on TERM_PROGRAM/tty/interactive so it stays
-  # silent in non-Warp terminals (Apple Terminal, ssh, WSL without Warp), which
+  # silent in non-Warp terminals (Apple Terminal, plain ssh), which
   # would otherwise print the raw escape sequence. Harmless no-op in the
   # top-level Warp shell, which is already warpified. The syntax is valid in both
   # zsh and bash, so the same snippet is shared by both. nix develop sources
@@ -56,7 +56,7 @@ in
       ''
       # zoxide must initialize last — after mise's chpwd hook — or it warns that
       # its hook may be shadowed. mkOrder 2000 puts it after every other init
-      # contributor (incl. the WSL agent relay at 1500).
+      # contributor.
       (lib.mkOrder 2000 ''eval "$(${config.programs.zoxide.package}/bin/zoxide init zsh)"'')
       (lib.mkAfter (warpifyHook "zsh"))
     ];

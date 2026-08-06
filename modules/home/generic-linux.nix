@@ -1,7 +1,7 @@
 # Standalone home-manager on a NON-NixOS Linux distro (Arch/CachyOS, Ubuntu, ...).
 #
 # Import this ONLY on hosts where some other distro owns /etc and /usr. It must never
-# reach the NixOS WSL host: targets.genericLinux exists to paper over the gap between a
+# reach a NixOS host: targets.genericLinux exists to paper over the gap between a
 # foreign distro and the Nix store, and on NixOS those same fixups are wrong (NixOS
 # already sets XDG_DATA_DIRS and LOCALE_ARCHIVE correctly, and home-manager warns when
 # genericLinux is enabled there).

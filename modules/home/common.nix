@@ -1,4 +1,4 @@
-# Platform-agnostic home-manager config, shared by every host (WSL, personal Mac,
+# Platform-agnostic home-manager config, shared by every host (NixOS, personal Mac,
 # work Mac). Anything here must hold on both Linux and Darwin — OS-specific bits live
 # in ./linux.nix and ./darwin.nix.
 #
@@ -9,7 +9,7 @@
 # NOTE: keep this module free of any `nix.*` settings. The work Mac runs Determinate
 # Nix (which owns Nix's own config) and consumes this module via standalone
 # home-manager; managing Nix here would fight Determinate. All nix.settings/nixPath
-# live in modules/nixos/* instead, which only the WSL host imports.
+# live in modules/nixos/* instead, which only the NixOS hosts import.
 {
   config,
   lib,

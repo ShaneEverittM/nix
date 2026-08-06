@@ -1,7 +1,8 @@
-# The universal home-manager core, imported by every host (WSL, exodus, personal Mac,
-# work Mac). Platform-specific layers are imported alongside this: ./wsl.nix on WSL,
-# ./linux.nix (+ ./desktop.nix) on native Linux, ./darwin.nix on the Macs. Exposed
-# as `homeModules.default` in flake.nix.
+# The universal home-manager core, imported by the workstation hosts (exodus, personal
+# Mac, work Mac). Platform-specific layers are imported alongside this: ./linux.nix
+# (+ ./desktop.nix) on native Linux, ./darwin.nix on the Macs. Exposed as
+# `homeModules.default` in flake.nix. (The rebirth server skips the bundle and imports
+# ./git.nix + ./shell.nix à la carte.)
 { ... }:
 {
   imports = [

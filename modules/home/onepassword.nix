@@ -2,18 +2,15 @@
 # conditional scattered through the shell config. Part of the core bundle so every host
 # can just flip it on.
 #
-# 1Password exposes the agent at a different path on each platform, and on WSL there is
-# no native agent at all — ./ssh-agent.nix relays the Windows named pipe to a socket at
-# the Linux default path below. So the three hosts differ only in the value:
+# 1Password exposes the agent at a different path on each platform, so the hosts
+# differ only in the value:
 #
 #   macOS   ~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock  (native)
 #   Linux   ~/.1password/agent.sock                                          (native)
-#   WSL     ~/.1password/agent.sock                                          (relayed)
 #
 # Signing is the other half and stays in publicHome.git.sshSigningProgram, because the
-# signer binary's path is machine-specific (/Applications/... on macOS,
-# /opt/1Password/op-ssh-sign on Linux) and WSL signs through ssh-keygen + the relayed
-# agent with no signer binary at all.
+# signer binary's path is machine-specific (/Applications/... on macOS, a store path
+# on NixOS); a host with no signer binary signs through ssh-keygen + the agent.
 {
   config,
   lib,

@@ -3,12 +3,14 @@
 Public, multiplatform Nix configuration. It is a shared home-manager layer plus per-host
 assemblies for
 
-- a **NixOS-on-WSL** system (user `shane`, host `nixos`),
 - a **bare-metal NixOS desktop** (host `exodus`, KDE Plasma; home-manager folded in as a
   NixOS module),
 - a **headless NixOS home server** (host `rebirth`, a repurposed laptop; home-manager
-  folded in, git module only), and
+  folded in, git + shell modules only), and
 - a **personal macOS** machine (standalone home-manager, no nix-darwin)
+
+(A NixOS-on-WSL host existed before the two physical machines did; it was dropped once
+they made it redundant — see git history.)
 
 It is also designed to be consumed by private consumers, like at work
 [Downstream: the private work repo](#downstream-the-private-work-repo).
@@ -20,6 +22,7 @@ It is also designed to be consumed by private consumers, like at work
 | `flake.nix`                                    | inputs + outputs: hosts, home configs, packages, modules.            |
 | `lib/packages.nix`                             | shared CLI package set (`pkgs -> [ derivations ]`), used everywhere. |
 | `lib/unstable-packages.nix`                    | shared CLI packages that move fast, used everywhere.                 |
+| `lib/identity.nix`                             | single-sourced public identity: name, email, SSH public key.         |
 | `files/`                                       | public dotfiles; store or out-of-store per `dotfiles.mode`.          |
 | `Brewfile`                                     | macOS casks/formulae base.                                           |
 | `modules/home/`                                | home-manager modules (the universal sharing layer).                  |
@@ -30,41 +33,35 @@ It is also designed to be consumed by private consumers, like at work
 | `modules/home/rust.nix`                        | rustup + cargo (sanitized cross-compile config).                     |
 | `modules/home/bun.nix`                         | bun runtime + global @types/bun.                                     |
 | `modules/home/onepassword.nix`                 | SSH_AUTH_SOCK for the 1Password agent (per-platform path).           |
-| `modules/home/linux.nix`                       | shared Linux layer (WSL + native Linux).                             |
-| `modules/home/wsl.nix`                         | WSL-only: Windows VS Code PATH, ssh-agent, warp-wsl.                 |
+| `modules/home/linux.nix`                       | shared Linux layer.                                                  |
 | `modules/home/generic-linux.nix`               | non-NixOS distro fixups: XDG dirs, locale, fontconfig.               |
 | `modules/home/desktop.nix`                     | cross-platform GUI bundle: vscode + zed + warp + jetbrains.          |
 | `modules/home/darwin.nix`                      | mac-only layer (imports desktop).                                    |
 | `modules/home/{vscode,zed,warp,jetbrains}.nix` | GUI/terminal dotfiles (out-of-store symlinks), per-OS paths.         |
-| `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + Linux + WSL).                   |
-| `modules/home/warp-wsl.nix`                    | WSL-only: seeds the Windows-side Warp install.                       |
-| `modules/nixos/`                               | NixOS system modules (WSL + exodus).                                 |
-| `modules/nixos/common.nix`                     | flakes, system git, nixPath pin (shared by both NixOS hosts).        |
-| `modules/nixos/wsl.nix`                        | wsl.\*, openssh, user shane, nix-ld, zsh login shell, stateVersion.  |
-| `hosts/wsl/default.nix`                        | nixosConfigurations.nixos (nixos + home wsl).                        |
+| `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + Linux).                         |
+| `modules/nixos/common.nix`                     | shared physical-host base: boot, locale, user, sshd, tailscale, nh, home-manager fold-in + identity. |
 | `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                    |
-| `hosts/exodus/default.nix`                     | nixosConfigurations.exodus (nixos + home linux + desktop).           |
-| `hosts/exodus/configuration.nix`               | exodus system layer (KDE Plasma, PipeWire, users, unfree, zsh).      |
-| `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (nixos + home git module only).          |
-| `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, avahi, openssh, lid-switch, zram).      |
+| `hosts/exodus/default.nix`                     | nixosConfigurations.exodus (common + home linux + desktop).          |
+| `hosts/exodus/configuration.nix`               | exodus system layer (KDE Plasma, NVIDIA, PipeWire, craftoria, swap). |
+| `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (common + home shell, à la carte).       |
+| `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch, zram, server packages).     |
 
 Why this shape: home-manager is the one layer every host shares, so the `modules/home/*`
-are the real reuse atom. The Linux hosts (WSL, exodus, and rebirth) run NixOS and fold
-home-manager in as a system module (sharing `modules/nixos/common.nix`); the Mac is
-standalone home-manager with no nix-darwin (the work Mac can't — MDM owns the system; the
-personal Mac doesn't need it). Platform splits happen by **which modules a host imports**,
-not by `mkIf` — `mkIf` guards values, not option existence (`wsl.enable` can't be
-referenced in a Darwin eval at all).
+are the real reuse atom. The two Linux hosts (exodus and rebirth) run NixOS and fold
+home-manager in as a system module via the shared physical-host base
+(`modules/nixos/common.nix` — boot, locale, the `shane` account, hardened sshd,
+Tailscale, `nh`, and the home-manager fold-in with the personal identity from
+`lib/identity.nix`); the Mac is standalone home-manager with no nix-darwin (the work Mac
+can't — MDM owns the system; the personal Mac doesn't need it). Platform splits happen
+by **which modules a host imports**, not by `mkIf` — `mkIf` guards values, not option
+existence (a NixOS-only option can't be referenced in a Darwin eval at all).
 
-The Linux side splits three ways, and the distinction matters: `linux.nix` is what every
-Linux host shares, `wsl.nix` holds everything that assumes a Windows side exists (the
-agent relay, the Windows Warp seeder, the Windows VS Code launcher), and
-`generic-linux.nix` holds the non-NixOS distro fixups that would be actively wrong on
-NixOS. All Linux hosts run NixOS today, so `generic-linux.nix` has no in-repo consumer —
-it stays exported via `homeModules.genericLinux` for downstream non-NixOS Linux.
-Orthogonally, `desktop.nix` carries the GUI dotfiles for any machine with a graphical
-session — macOS and exodus share it; WSL does not, because the GUI apps there run on the
-Windows side.
+On the Linux side, `linux.nix` is what every Linux host shares, and `generic-linux.nix`
+holds the non-NixOS distro fixups that would be actively wrong on NixOS. All in-repo
+Linux hosts run NixOS today, so `generic-linux.nix` has no in-repo consumer — it stays
+exported via `homeModules.genericLinux` for downstream non-NixOS Linux. Orthogonally,
+`desktop.nix` carries the GUI dotfiles for any machine with a graphical session — macOS
+and exodus share it; the headless rebirth does not.
 
 The shared modules are **option-driven**: behavior lives in the module, per-machine
 values come from the `publicHome.*` options a host sets — `username` (derives
@@ -76,11 +73,10 @@ flake, or point to a local clone of this flake. Mergeable TOML config is generat
 Nix attrsets, so downstream consumers can overlay Cargo and Warp settings without text
 templates or appended TOML strings. This is what lets the public modules carry no
 identity/secrets: each host — and the private work repo — supplies its own. The
-interactive shell is **zsh everywhere** a human works interactively; macOS already
-defaults to it, and WSL and exodus set shane's login shell declaratively
-(`modules/nixos/wsl.nix` for WSL, `hosts/exodus/configuration.nix` for exodus). The
-headless `rebirth` keeps the default bash and imports only the git home module. Everything is pinned to the
-**nixos-25.11** release across the baseline inputs, with a single stable `nixpkgs`
+interactive shell is **zsh everywhere**; macOS already defaults to it, and the NixOS
+hosts set shane's login shell declaratively in the shared base
+(`modules/nixos/common.nix`). Everything is pinned to the
+**nixos-26.05** release across the baseline inputs, with a single stable `nixpkgs`
 (`follows` threaded through the main inputs). A separate `nixpkgs-unstable` input is
 used only for the small cross-host package lane in `lib/unstable-packages.nix`, for
 tools that need to move faster than the release branch.
@@ -95,7 +91,7 @@ symlink, and GitHub Copilot gets a short entrypoint through
 
 ## Applying Changes
 
-**WSL, exodus, and rebirth (all NixOS):**
+**exodus and rebirth (both NixOS):**
 
 ```bash
 nh os switch
@@ -107,9 +103,9 @@ nh os switch
 nh home switch
 ```
 
-`nh os` builds the NixOS host matching the running system's hostname (`nixos` under WSL,
-`exodus` on the desktop, `rebirth` on the home server). `nh home` auto-detects
-`<user>@<hostname>` and falls back to the `shane` alias on the Mac.
+`nh os` builds the NixOS host matching the running system's hostname (`exodus` on the
+desktop, `rebirth` on the home server). `nh home` auto-detects `<user>@<hostname>` and
+falls back to the `shane` alias on the Mac.
 
 Edit the layer that fits the change, then rebuild. The flake is read from the git tree,
 so **new files must be `git add`-ed** before a rebuild/switch will see them.
@@ -155,8 +151,8 @@ downstream consumer install a Warp build through Nix (e.g. `"stable"` or a sourc
 ## exodus (NixOS desktop) Notes
 
 `exodus` is a bare-metal NixOS KDE Plasma desktop (formerly CachyOS — see git history).
-NixOS owns the whole box, and home-manager is folded in as a NixOS module the same way
-the WSL host does it (`hosts/exodus/default.nix`). Apply with `nh os switch`. Unlike the
+NixOS owns the whole box, and home-manager is folded in as a NixOS module via the shared
+base (`modules/nixos/common.nix`). Apply with `nh os switch`. Unlike the
 Mac, the GUI apps are installed **from Nix** here (`vscode`, `jetbrains.idea`,
 `claude-code` from stable, plus `warp-terminal` and `zed-editor` from the
 `nixpkgs-unstable` lane since they move fast, in the host's `home.packages`, plus the
@@ -165,8 +161,8 @@ Warp can't self-update from the read-only store, so tracking unstable keeps it c
 current; bump it with `nix flake update nixpkgs-unstable`.)
 
 `hosts/exodus/configuration.nix` is the system layer (KDE Plasma 6 on Wayland, PipeWire,
-SDDM, the `shane` account with zsh as the declarative login shell, and a blanket
-`nixpkgs.config.allowUnfree` for the desktop apps). `generic-linux.nix` is **not** imported
+SDDM, NVIDIA, and the Craftoria/btrbk/swap stack); the `shane` account, zsh login
+shell, sshd, and `allowUnfree` all come from the shared base. `generic-linux.nix` is **not** imported
 — its foreign-distro fixups (`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are things NixOS already
 handles natively.
 
@@ -251,19 +247,22 @@ override, for this KDE/Wayland session).
 in from a formerly standalone repo
 ([`nix-server`](https://github.com/ShaneEverittM/nix-server), now archived — its
 pre-merge history lives there), where the host was named `nixos`; it was renamed on
-merge because that flake attr belongs to the WSL host. Machine shape:
+merge because that flake attr then belonged to the since-dropped WSL host. Machine
+shape:
 
 - Disk: btrfs subvolumes for `/`, `/home`, `/nix`; separate vfat `/boot`.
 - Networking: Wi-Fi via `networking.wireless` (wpa_supplicant), mDNS via Avahi
-  (reachable as `rebirth.local` on the LAN).
-- Home-manager is folded in as a NixOS module like the other NixOS hosts, but imports
-  only the git module — no core bundle, no GUI dotfiles.
+  (reachable as `rebirth.local` on the LAN), plus Tailscale from the shared base.
+- Home-manager is folded in via the shared base (git module + identity), and the host
+  adds `shell.nix` plus the shared stable CLI set (`lib/packages.nix`) — no core
+  bundle, no GUI dotfiles, no language toolchains, no unstable lane.
 
 ### First switch after the fold-in (or a rename)
 
-The box's running hostname must match its flake attr before plain `nh os switch` is
-safe: while the hostname is still `nixos`, hostname auto-detection would select the
-**WSL** configuration. For the first switch, name the host explicitly:
+The box's running hostname must match its flake attr before plain `nh os switch`
+works: hostname auto-detection looks for a config named after the machine, and while
+the hostname is still `nixos` no such config exists. For the first switch, name the
+host explicitly:
 
 ```bash
 sudo nixos-rebuild switch --flake ~/.config/nix#rebirth
@@ -272,8 +271,12 @@ sudo nixos-rebuild switch --flake ~/.config/nix#rebirth
 (and repoint the `~/.config/nix` checkout at this repo first — same path the old repo
 used, so `programs.nh.flake` is unchanged). After that switch the hostname is
 `rebirth`, plain `nh os switch` resolves correctly, and the box answers to
-`rebirth.local` instead of `nixos.local` — update any `~/.ssh/config` aliases on other
-machines.
+`rebirth.local` instead of `nixos.local` — update any `~/.ssh/config` entries on other
+machines. That last step is load-bearing, not cosmetic: a `Host` block that no longer
+matches the new name silently stops applying `ForwardAgent`, and since this box does
+all git auth *and* commit signing through the forwarded agent, the symptom is git
+failing against GitHub (auth/signing errors) rather than anything obviously
+SSH-related.
 
 ### Wi-Fi PSK secret
 
@@ -302,59 +305,19 @@ created manually on the box:
    echo 'psk_Marconi=PASTE_THE_64_HEX_HASH_HERE' | sudo tee /etc/wpa_supplicant/wireless.conf
    ```
 
-## WSL Notes
-
-- Some `wsl.wslConf.*` settings (e.g. `interop.appendWindowsPath`) only take effect
-  after a full WSL restart: run `wsl --shutdown` from Windows, then reopen the distro.
-- The primary user is `shane` (uid 1001); the NixOS-WSL fallback `nixos` account holds
-  uid 1000.
-
-## Warp on WSL
-
-Warp under WSL is a **Windows** app, so its config lives on the Windows filesystem and
-can't be a nix-store symlink (Warp.exe can't follow one). `modules/home/warp-wsl.nix`
-therefore _copies_ Nix-generated config onto `/mnt/c` during `nixos-rebuild switch`
-(declarative content, imperative placement), gated by `publicHome.warp.wslConfig`:
-
-- **settings** → `%LOCALAPPDATA%\warp\Warp\config\settings.toml`
-- **themes** → `%APPDATA%\warp\Warp\data\themes\*.yaml` (JetBrains dark/light)
-
-The settings schema is shared with the Macs (`modules/home/warp-settings.nix`); only the
-`themeDir` baked into the TOML differs (a `C:/Users/...` path Warp resolves). Override
-the Windows account with `publicHome.warp.windowsUser` (defaults to
-`publicHome.username`) and merge extra settings via `publicHome.warp.extraSettings`.
-
-Caveat: Warp **rewrites `settings.toml` at runtime** (any UI toggle), so this is a
-seed-on-switch, not a locked file — the same trade-off the macOS module accepts except
-without the symlink showing changes in this repo.
-
 ## 1Password SSH agent
 
-All three hosts authenticate `ssh`/`git` against the 1Password agent, and all three sign
-commits with the same key — only the paths differ, so they are typed options rather than
-conditionals in the shell config. `modules/home/onepassword.nix` owns
+The workstation hosts authenticate `ssh`/`git` against the 1Password agent, and every
+host signs commits with the same key — only the paths differ, so they are typed options
+rather than conditionals in the shell config. `modules/home/onepassword.nix` owns
 `publicHome.onepassword.sshAuthSock` (defaulting per platform) and exports
 `SSH_AUTH_SOCK`; `publicHome.git.sshSigningProgram` names the signer:
 
-| Host   | Agent socket                       | Signer                                       |
-| ------ | ---------------------------------- | -------------------------------------------- |
-| macOS  | `~/Library/Group Containers/...`   | `/Applications/1Password.app/...`            |
-| exodus | `~/.1password/agent.sock` (native) | `${pkgs._1password-gui}/…/op-ssh-sign` (Nix) |
-| WSL    | `~/.1password/agent.sock` (relay)  | none — `ssh-keygen` + relayed agent          |
+| Host    | Agent socket                       | Signer                                       |
+| ------- | ---------------------------------- | -------------------------------------------- |
+| macOS   | `~/Library/Group Containers/...`   | `/Applications/1Password.app/...`            |
+| exodus  | `~/.1password/agent.sock` (native) | `${pkgs._1password-gui}/…/op-ssh-sign` (Nix) |
+| rebirth | forwarded agent (`ssh -A` from a workstation) | none — `ssh-keygen` + forwarded agent |
 
-### The WSL relay
-
-WSL has no native agent, so `modules/home/ssh-agent.nix` bridges the Windows 1Password
-SSH agent (a named pipe) to a Unix socket at that same Linux path, so keys never leave
-1Password. Enabled in the WSL host via `publicHome.onepassword.sshAgentRelay`, which
-implies `sshAgent`. The Nix side (socat, `SSH_AUTH_SOCK`, the lazy relay started from zsh) is automatic; these
-**Windows-side** steps are manual (not Nix-managed):
-
-1. **1Password for Windows → Settings → Developer:** enable _Use the SSH agent_ (and
-   _Integrate with 1Password CLI_ if you want `op`/signing).
-2. **Install `npiperelay.exe`** on Windows, e.g. `scoop install npiperelay`. If it lands
-   somewhere other than `~/scoop/shims/npiperelay.exe`, set
-   `publicHome.onepassword.npiperelay` to the WSL-visible path (`/mnt/c/...`).
-3. Open a fresh WSL shell; `ssh-add -l` should list your 1Password keys.
-   (`communication with agent failed` means npiperelay isn't found or the agent toggle
-   is off.)
+rebirth runs no 1Password app: it has no secrets of its own, and signing/auth work
+through the SSH agent forwarded from whichever workstation is connected.

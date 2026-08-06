@@ -41,7 +41,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Building two full NixOS system closures (KDE desktop + WSL) can exhaust the
+      # Building two full NixOS system closures (KDE desktop + home server) can exhaust the
       # ~14 GB free on a stock Linux runner; reclaim space before the Nix store fills.
       - name: Free disk space
         if: matrix.free-disk
