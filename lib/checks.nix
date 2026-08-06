@@ -167,6 +167,15 @@ let
         # need /dev/kvm, so the Linux CI job enables it (see .github/workflows/ci.yml).
         craftoria-console = import ../tests/craftoria-console.nix { pkgs = pkgsFor system; };
 
+        # Boots the shared modules/nixos base (minus btrfs — its mount options assume
+        # the real pools) and asserts behavior: hardened sshd on the wire, the
+        # discovery/DNS/tailnet daemons, memory backstops, and the home-manager
+        # fold-in end to end.
+        base-smoke = import ../tests/base-smoke.nix {
+          pkgs = pkgsFor system;
+          inherit inputs;
+        };
+
         # The genericLinux flavor of the downstream check: homeModules.default + linux
         # + genericLinux, as a downstream non-NixOS Linux box would consume them. The
         # only coverage genericLinux has — it's exported for exactly that consumer and

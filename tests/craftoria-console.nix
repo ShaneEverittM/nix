@@ -11,9 +11,10 @@
 { pkgs }:
 let
   inherit (pkgs) lib;
-  # Must match modules serverDir; the stand-in writes its transcript here and the test
-  # reads it back from the host side of the bind mount.
-  serverDir = "/home/shane/Servers/minecraft/craftoria2";
+  # The stand-in writes its transcript here and the test reads it back from the host
+  # side of the bind mount. Shared with the module via craftoria-paths.nix, so the
+  # test cannot drift from the serverDir the unit actually uses.
+  inherit (import ../hosts/exodus/craftoria-paths.nix) serverDir;
 in
 pkgs.testers.runNixOSTest {
   name = "craftoria-console";
