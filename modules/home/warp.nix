@@ -7,9 +7,6 @@
 #   Linux   settings ~/.config/warp-terminal/settings.toml
 #           themes   ~/.local/share/warp-terminal/themes
 #
-# WSL is NOT covered here — Warp there is a Windows app that can't follow store
-# symlinks; see ./warp-wsl.nix, the third consumer of the shared settings schema.
-#
 # The optional packageSource installs a Warp build through Home Manager; leave it "none"
 # unless a `warpPackages` arg is supplied by the consumer. On the public hosts Warp comes
 # from Homebrew (macOS) or the distro (Linux), and Nix owns only its config.

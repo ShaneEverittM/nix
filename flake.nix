@@ -1,14 +1,11 @@
 {
-  description = "Platform-agnostic Nix config: NixOS hosts (WSL, desktop, home server) + standalone home-manager for macOS";
+  description = "Platform-agnostic Nix config: NixOS hosts (desktop + home server) + standalone home-manager for macOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     # Small package lane for cross-host tools that need to move faster than nixos-26.05.
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-
-    nixos-wsl.url = "github:nix-community/NixOS-WSL/release-26.05";
-    nixos-wsl.inputs.nixpkgs.follows = "nixpkgs";
 
     home-manager.url = "github:nix-community/home-manager/release-26.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
@@ -27,11 +24,6 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
-      # WSL host — `nixos-rebuild switch --flake .#nixos`.
-      nixosConfigurations.nixos = import ./hosts/wsl/default.nix {
-        inherit inputs;
-        system = "x86_64-linux";
-      };
       # Bare-metal KDE desktop — `nixos-rebuild switch --flake .#exodus` (or `nh os
       # switch`). Formerly a standalone home-manager config on CachyOS; now full NixOS
       # with home-manager folded in (see hosts/exodus/default.nix).
@@ -97,7 +89,6 @@
       homeModules = {
         default = import ./modules/home; # core bundle (common + git + shell + rust + bun)
         linux = import ./modules/home/linux.nix; # shared Linux layer
-        wsl = import ./modules/home/wsl.nix; # WSL extras (pulls in linux)
         genericLinux = import ./modules/home/generic-linux.nix; # non-NixOS distro fixups
         darwin = import ./modules/home/darwin.nix; # Mac layer (pulls in desktop)
         desktop = import ./modules/home/desktop.nix; # GUI bundle (vscode + zed + warp + jetbrains)
@@ -117,7 +108,6 @@
 
       nixosModules = {
         default = import ./modules/nixos/common.nix;
-        wsl = import ./modules/nixos/wsl.nix;
       };
 
       # CI gates as flake checks, so `nix flake check` runs the same lint + build

@@ -7,7 +7,7 @@
 # aarch64-darwin (Darwin home activations); together they cover every target.
 #
 #   Every system : nixfmt / deadnix / statix lint gates (source-only, cheap).
-#   x86_64-linux : all NixOS toplevels (exodus desktop + WSL + rebirth server) build — this is
+#   x86_64-linux : both NixOS toplevels (exodus desktop + rebirth server) build — this is
 #                  what catches build-time breakage that pure eval misses, e.g. a wrong
 #                  Warp AppImage hash or a broken substituteInPlace.
 #   aarch64-darwin: the personal macbook home activation, plus `downstream` — a standalone
@@ -99,7 +99,6 @@ let
     {
       x86_64-linux = {
         exodus-toplevel = self.nixosConfigurations.exodus.config.system.build.toplevel;
-        wsl-toplevel = self.nixosConfigurations.nixos.config.system.build.toplevel;
         rebirth-toplevel = self.nixosConfigurations.rebirth.config.system.build.toplevel;
 
         # Boots a VM and smoke-tests the craftoria console plumbing (FIFO socket +

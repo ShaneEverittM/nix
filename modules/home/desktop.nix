@@ -8,8 +8,7 @@
 # distro on Linux; Nix only owns their config. Writing config for an app that isn't
 # installed yet is harmless and means it is already right when the app arrives.
 #
-# Not for WSL: there the GUI apps run on the Windows side, so the Linux-side config dirs
-# would be inert. WSL gets ./warp-wsl.nix instead, which pushes to the Windows profile.
+# Not for headless hosts: with no graphical session the config dirs would be inert.
 { ... }:
 {
   imports = [

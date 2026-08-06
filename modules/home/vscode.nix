@@ -1,9 +1,7 @@
 # VS Code user settings/keybindings as out-of-store symlinks, so they stay live-
 # editable in the checked-out repo (publicHome.configRoot) rather than being copied
 # read-only into the Nix store. Cross-platform (bundled via desktop.nix); the user
-# config dir differs per OS, hence the split below. Not for WSL: VS Code runs on the
-# Windows side there, so writing the Linux config dir would be inert (the WSL host
-# instead puts the Windows `code` launcher on PATH — see modules/home/wsl.nix).
+# config dir differs per OS, hence the split below.
 { config, pkgs, ... }:
 
 let
