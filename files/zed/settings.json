@@ -10,7 +10,7 @@
   // Window, layout, and panels
   "ssh_connections": [
     {
-      "host": "nixos.local",
+      "host": "rebirth.local",
       "username": "shane",
       "args": [],
       "projects": [

@@ -1,11 +1,12 @@
 {
-  // Use nixd (installed via home.nix) as the language server, not the built-in.
+  // Use nixd (from lib/packages.nix via modules/home/common.nix) as the language
+  // server, not the built-in.
   "nix.enableLanguageServer": true,
   "nix.serverPath": "nixd",
 
   "nix.serverSettings": {
     "nixd": {
-      // Format with nixfmt (nixfmt-rfc-style), installed via home.nix.
+      // Format with nixfmt, also from lib/packages.nix.
       "formatting": {
         "command": ["nixfmt"]
       },
@@ -14,12 +15,14 @@
         "expr": "import <nixpkgs> { }"
       },
       // Option completion/hover for THIS flake's NixOS + home-manager options.
+      // Mirrors .zed/settings.json: the Linux checkout path — on the Mac these
+      // exprs fail harmlessly and nixd degrades to plain completion.
       "options": {
         "nixos": {
-          "expr": "(builtins.getFlake \"/home/shane/nixos-config\").nixosConfigurations.nixos.options"
+          "expr": "(builtins.getFlake \"/home/shane/.config/nix\").nixosConfigurations.rebirth.options"
         },
         "home-manager": {
-          "expr": "(builtins.getFlake \"/home/shane/nixos-config\").nixosConfigurations.nixos.options.home-manager.users.type.getSubOptions []"
+          "expr": "(builtins.getFlake \"/home/shane/.config/nix\").nixosConfigurations.rebirth.options.home-manager.users.type.getSubOptions []"
         }
       }
     }
