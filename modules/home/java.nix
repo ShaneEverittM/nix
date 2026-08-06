@@ -11,13 +11,17 @@
 #
 # gradle comes from pkgsUnstable (faster release cadence; passed via extraSpecialArgs
 # by each host). The unversioned `gradle` attr is aliased to the previous major
-# (gradle_8) for compat, so pin gradle_9 explicitly for the current major. Shared by
-# every host.
+# (gradle_8) for compat, so pin gradle_9 explicitly for the current major. Part of the
+# workstation core bundle (rebirth skips it).
+#
+# pkgsUnstable falls back to pkgs (same pattern as common.nix) so a consumer importing
+# homeModules.default without extraSpecialArgs still evaluates — it just gets the
+# stable channel's gradle_9 instead of the fast lane.
 {
   config,
   lib,
   pkgs,
-  pkgsUnstable,
+  pkgsUnstable ? pkgs,
   ...
 }:
 

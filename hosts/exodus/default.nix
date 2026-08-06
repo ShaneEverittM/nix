@@ -43,7 +43,7 @@ inputs.nixpkgs.lib.nixosSystem {
         }:
         {
           imports = [
-            ../../modules/home # core bundle (common + git + shell + rust + bun)
+            ../../modules/home # core bundle (common + git + onepassword + shell + rust + bun + java)
             ../../modules/home/linux.nix # shared Linux layer
             ../../modules/home/desktop.nix # GUI dotfiles (vscode + zed + warp + jetbrains)
             ./cider.nix # launcher entry for the out-of-store Cider AppImage
