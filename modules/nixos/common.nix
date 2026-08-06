@@ -74,7 +74,7 @@ in
   programs.zsh.enable = true;
 
   # Primary user account. Set a password with `passwd` after a host's first switch.
-  users.users."shane" = {
+  users.users.${identity.username} = {
     isNormalUser = true;
     description = identity.userName;
     extraGroups = [
@@ -95,7 +95,7 @@ in
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
-      AllowUsers = [ "shane" ];
+      AllowUsers = [ identity.username ];
       MaxAuthTries = 3;
       PerSourcePenalties = "crash:3600s authfail:3600s max:86400s";
       # The tailnet is trusted (device-authenticated WireGuard), so exempt it from
@@ -133,7 +133,7 @@ in
   # repo's checkout (publicHome.repoRoot defaults to ~/.config/nix).
   programs.nh = {
     enable = true;
-    flake = "/home/shane/.config/nix";
+    flake = "/home/${identity.username}/.config/nix";
   };
 
   # Shared home layer: every host gets the git module and the personal identity;
@@ -142,7 +142,7 @@ in
   # also pull it in via the core bundle — the module system imports a path once.
   home-manager.useGlobalPkgs = true;
   home-manager.useUserPackages = true;
-  home-manager.users.shane = {
+  home-manager.users.${identity.username} = {
     imports = [ ../home/git.nix ];
 
     # Personal git identity (already public). The work Mac sets its own in the
