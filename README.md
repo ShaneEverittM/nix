@@ -261,12 +261,17 @@ each world are listed **separately** because btrfs snapshots aren't recursive �
 those extra lines the worlds would be silently skipped, which is the entire point of
 having given them subvolumes. The paths come off
 `publicMinecraft.servers.*.worldSubvolume` so they can't drift from the `serverDir` the
-units run in. `minecraft/service.nix` hooks the generated `btrbk-local` unit to quiesce
-each running server (`save-off` + `save-all flush`) around the run, so the world
-snapshots are consistent rather than merely crash-consistent. Not snapshotted: `/nix`
-(snapshots pin store paths and would defeat `nix-collect-garbage`) and `/` (subvolid=5).
-Snapshots on one disk are not a backup — the off-box `btrfs send -p` half is deferred
-until there's a target host.
+units run in, and each carries an explicit `snapshot_name` of `<pack>-world`. That name
+is load-bearing with more than one pack: it defaults to the subvolume's basename, and
+every world subvolume is called `world`, so the default would file two different worlds
+under one name in one `snapshot_dir` — disambiguated only positionally by btrbk's `_N`
+collision suffix, and thinned as a single series by retention, since btrbk identifies a
+snapshot set by `snapshot_name` + `snapshot_dir`. `minecraft/service.nix` hooks the
+generated `btrbk-local` unit to quiesce each running server (`save-off` +
+`save-all flush`) around the run, so the world snapshots are consistent rather than
+merely crash-consistent. Not snapshotted: `/nix` (snapshots pin store paths and would
+defeat `nix-collect-garbage`) and `/` (subvolid=5). Snapshots on one disk are not a
+backup — the off-box `btrfs send -p` half is deferred until there's a target host.
 
 **GPU (dual-GPU box).** Monitors are wired to the NVIDIA card (Turing RTX 2070 SUPER,
 PCI `01:00.0`); the AMD Raphael iGPU (`0f:00.0`) stays on `amdgpu` but drives no

@@ -12,6 +12,12 @@
 # write to each block after a snapshot is forced back to CoW, so weekly (not a tight timer)
 # keeps that cost small.
 #
+# Snapshots are named `<pack>-world.<timestamp>` (see snapshot_name below). Craftoria's
+# pre-existing snapshots are from when it was the only pack and are named plain `world.*`;
+# they are still valid, readable snapshots, but btrbk no longer manages or expires them --
+# nothing matches that name any more. Delete them by hand (`btrfs subvolume delete
+# /.snapshots/world.*`) once the new timeline has enough depth to be worth keeping instead.
+#
 # ./minecraft adds ExecStartPre/ExecStopPost to the btrbk-local unit this generates, one
 # freeze/thaw pair per server, to quiesce them (save-off + save-all flush) around the run --
 # otherwise the world snapshots are only crash-consistent. Look there before debugging a
@@ -55,9 +61,20 @@
         subvolume = {
           "home" = { };
         }
-        // lib.mapAttrs' (_: srv: lib.nameValuePair srv.worldSubvolume { }) (
-          lib.filterAttrs (_: srv: srv.snapshotWorld) config.publicMinecraft.servers
-        );
+        // lib.mapAttrs' (
+          name: srv:
+          lib.nameValuePair srv.worldSubvolume {
+            # snapshot_name is REQUIRED once there is more than one pack. It defaults to the
+            # source subvolume's basename, and every pack's world subvolume is called
+            # `world` -- so the default would put two different worlds in one snapshot_dir
+            # under one name. btrbk would disambiguate them positionally with its `_N`
+            # collision suffix (`world.<ts>` and `world.<ts>_1`, with no stable indication of
+            # which pack is which), and, worse, it identifies a subvolume's snapshot set by
+            # snapshot_name + snapshot_dir -- so each pack's retention pass would treat the
+            # other pack's snapshots as its own series and thin them accordingly.
+            snapshot_name = "${name}-world";
+          }
+        ) (lib.filterAttrs (_: srv: srv.snapshotWorld) config.publicMinecraft.servers);
       };
     };
   };
