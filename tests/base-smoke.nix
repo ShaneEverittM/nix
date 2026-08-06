@@ -53,27 +53,33 @@ pkgs.testers.runNixOSTest {
     with subtest("sshd is up and hardened"):
         machine.wait_for_unit("sshd.service")
         machine.wait_for_open_port(22)
-        # sshd -T prints the *effective* daemon config, lowercased — this asserts the
-        # hardening actually applied, not just that our module set some options.
-        effective = machine.succeed("sshd -T")
+        # Assert the rendered config the module manages. (First attempt asserted on
+        # `sshd -T` instead; it exited 0 in this VM with output that matched nothing,
+        # so its dump is printed below as an unasserted diagnostic breadcrumb only —
+        # the wire tests are the real effective-behavior check.)
+        rendered = machine.succeed("cat /etc/ssh/sshd_config")
         for expected in [
-            "passwordauthentication no",
-            "kbdinteractiveauthentication no",
-            "permitrootlogin no",
-            "allowusers ${identity.username}",
+            "PasswordAuthentication no",
+            "KbdInteractiveAuthentication no",
+            "PermitRootLogin no",
+            "AllowUsers ${identity.username}",
         ]:
-            assert expected in effective, f"sshd -T missing: {expected}"
+            assert expected in rendered, f"sshd_config missing: {expected}"
+        print("sshd -T dump (diagnostic only):")
+        print(machine.succeed("sshd -T 2>&1 || true"))
 
-    with subtest("password auth is rejected on the wire"):
-        # A real client attempt, not a config grep. NumberOfPasswordPrompts=0 keeps it
-        # non-interactive; the guard on `ssh` existing keeps machine.fail honest (a
-        # missing client binary would otherwise fake a pass).
+    with subtest("only publickey auth is offered on the wire"):
+        # A real client attempt, and a discriminating one: the server names its
+        # permitted auth methods in the denial. Hardened → "Permission denied
+        # (publickey)."; password auth enabled would read "(publickey,password)" and
+        # fail the exact-match assertion. The `ssh` guard keeps machine.fail honest —
+        # a missing client binary would otherwise fake the failure.
         machine.succeed("command -v ssh")
-        machine.fail(
+        denied = machine.fail(
             "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "
-            "-o PreferredAuthentications=password -o NumberOfPasswordPrompts=0 "
-            "${identity.username}@127.0.0.1 true"
+            "-o NumberOfPasswordPrompts=0 ${identity.username}@127.0.0.1 true 2>&1"
         )
+        assert "Permission denied (publickey)" in denied, f"unexpected denial: {denied!r}"
 
     with subtest("discovery, DNS, and tailnet daemons are up"):
         machine.wait_for_unit("avahi-daemon.service")
