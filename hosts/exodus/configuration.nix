@@ -23,37 +23,11 @@
     ./beszel.nix
   ];
 
-  # Personal desktop: allow the unfree apps this box runs (1Password, Warp, VS Code,
-  # JetBrains, Claude Code). Broader than the shared lib/nixpkgs-config.nix predicate
-  # (which the standalone home configs use), because this host installs GUI apps that
-  # the CachyOS distro used to provide.
-  nixpkgs.config.allowUnfree = true;
-
   programs._1password.enable = true;
   programs._1password-gui.enable = true;
 
-  # Bootloader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-
   networking.hostName = "exodus";
   networking.networkmanager.enable = true;
-
-  time.timeZone = "America/Los_Angeles";
-
-  # Select internationalisation properties.
-  i18n.defaultLocale = "en_US.UTF-8";
-  i18n.extraLocaleSettings = {
-    LC_ADDRESS = "en_US.UTF-8";
-    LC_IDENTIFICATION = "en_US.UTF-8";
-    LC_MEASUREMENT = "en_US.UTF-8";
-    LC_MONETARY = "en_US.UTF-8";
-    LC_NAME = "en_US.UTF-8";
-    LC_NUMERIC = "en_US.UTF-8";
-    LC_PAPER = "en_US.UTF-8";
-    LC_TELEPHONE = "en_US.UTF-8";
-    LC_TIME = "en_US.UTF-8";
-  };
 
   # KDE Plasma 6 on Wayland, with the SDDM display manager.
   services.xserver.enable = true;
@@ -107,11 +81,6 @@
     pulse.enable = true;
   };
 
-  # zsh is the shared interactive shell (see modules/home/shell.nix). Enable it
-  # system-wide and make it shane's login shell declaratively — on CachyOS this took a
-  # manual `chsh` because the distro owned /etc/passwd; NixOS owns it here.
-  programs.zsh.enable = true;
-
   # AppImage runtime. AppImages assume an FHS layout NixOS doesn't provide, so they
   # can't just be chmod+x'd and run. This module ships an FHS sandbox for them, and
   # `binfmt = true` registers a kernel handler so any `*.AppImage` executes directly
@@ -123,64 +92,14 @@
     binfmt = true;
   };
 
-  # Primary user account. Set a password with `passwd` after the first switch.
-  users.users."shane" = {
-    isNormalUser = true;
-    description = "Shane Murphy";
-    extraGroups = [
-      "networkmanager"
-      "wheel"
-    ];
-    shell = pkgs.zsh;
-    packages = with pkgs; [
-      kdePackages.kate
-    ];
-    # SSH in with the 1Password-held key (same key as the WSL host and commit signing).
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwRBMnr95gqzkvJHmNDCprKK2QcV2vNQVS6mAsGzcz3"
-    ];
-  };
+  # Desktop-only extras on the shared shane account (modules/nixos/common.nix owns the
+  # account itself).
+  users.users."shane".packages = with pkgs; [
+    kdePackages.kate
+  ];
 
-  # SSH access over the LAN (behind the home router this is reachable only from the
-  # local network unless port 22 is forwarded). Key-only, hardened like the WSL host.
-  services.openssh = {
-    enable = true;
-    openFirewall = true;
-    settings = {
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-      PermitRootLogin = "no";
-      AllowUsers = [ "shane" ];
-      MaxAuthTries = 3;
-      PerSourcePenalties = "crash:3600s authfail:3600s max:86400s";
-      # The tailnet is trusted (device-authenticated WireGuard), so exempt it from
-      # brute-force penalties: a flaky client or a locked 1Password agent retrying
-      # over Tailscale must never be able to lock me out of my own remote access.
-      # 100.64.0.0/10 is Tailscale's CGNAT range. LAN/WAN keeps the hardening.
-      PerSourcePenaltyExemptList = "100.64.0.0/10";
-    };
-  };
-
-  # mDNS: advertise/resolve `*.local` on the LAN so this box answers to
-  # `exodus.local` without a static IP. nssmdns4 wires mDNS into nsswitch so it
-  # resolves other `.local` hosts too; openFirewall opens UDP 5353.
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-    publish = {
-      enable = true;
-      addresses = true;
-      workstation = true;
-    };
-  };
-
-  # Tailscale: stable MagicDNS name (`exodus`) + reachability from any tailnet
-  # device, LAN or remote, over WireGuard. Enabling installs tailscaled + the CLI;
-  # join the tailnet once with an interactive `tailscale up` (no key in this public
-  # repo). SSH already works over the tailnet since port 22 is open on all
-  # interfaces; scope it to the tailnet later if you want to drop LAN exposure.
-  services.tailscale.enable = true;
+  # Advertise as a workstation on mDNS, on top of the shared avahi publish config.
+  services.avahi.publish.workstation = true;
 
   # Install firefox.
   programs.firefox.enable = true;
@@ -189,9 +108,6 @@
   environment.systemPackages = with pkgs; [
     vim
   ];
-
-  # Provide a real dynamic linker at the FHS path so prebuilt/foreign binaries can run.
-  programs.nix-ld.enable = true;
 
   # Memory-pressure resilience. 14 GiB RAM running a JVM Minecraft server (./craftoria.nix)
   # alongside the desktop. Originally this box had zero swap, so a memory spike couldn't
