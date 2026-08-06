@@ -34,7 +34,7 @@ private hostnames, private registry URLs, or encrypted secret files.
 | `flake.nix`                                              | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env.                                    |
 | `hosts/macbook/default.nix`                              | Personal Mac standalone home-manager assembly. No nix-darwin.                                                                       |
 | `hosts/exodus/default.nix`                               | `exodus` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop).                                        |
-| `hosts/exodus/configuration.nix`                         | `exodus` system layer: KDE Plasma, NVIDIA, PipeWire, crash handling; imports the craftoria/btrbk/swap/beszel siblings.              |
+| `hosts/exodus/configuration.nix`                         | `exodus` system layer: KDE Plasma, NVIDIA, PipeWire, crash handling; imports the minecraft/btrbk/swap/beszel siblings.              |
 | `hosts/exodus/hardware-configuration.nix`                | `exodus` generated hardware scan (filesystems, kernel modules).                                                                     |
 | `hosts/rebirth/default.nix`                              | `rebirth` headless home-server assembly. Home layer: git (via base) + shell + shared CLI set.                                       |
 | `hosts/rebirth/configuration.nix`                        | `rebirth` system layer: Wi-Fi (wpa_supplicant), lid-switch.                                                                         |
@@ -106,6 +106,7 @@ and workflow reminders.
 | Add NixOS behavior for every NixOS host  | the matching single-concern `modules/nixos/*.nix` (new concerns: new module + bundle line in `modules/nixos/default.nix`) |
 | Add JVM/gradle behavior                  | `modules/home/java.nix`                                                                                                   |
 | Add exodus-only system behavior          | `hosts/exodus/configuration.nix`                                                                                          |
+| Add/change a Minecraft pack              | `hosts/exodus/minecraft/default.nix` (a pack) or `minecraft/service.nix` (behavior every pack gets)                       |
 | Add rebirth-only system behavior         | `hosts/rebirth/configuration.nix`                                                                                         |
 | Change name/email/SSH public key         | `lib/identity.nix`                                                                                                        |
 | Add behavior for every Linux host        | `modules/home/linux.nix`                                                                                                  |
