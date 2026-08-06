@@ -14,7 +14,8 @@
   outputs =
     inputs@{ self, nixpkgs, ... }:
     let
-      nixpkgsConfig = import ./lib/nixpkgs-config.nix { inherit (nixpkgs) lib; };
+      # Shared nixpkgs instantiation (unfree predicate baked in) — see lib/mk-pkgs.nix.
+      mkPkgs = import ./lib/mk-pkgs.nix;
 
       # Systems the convenience `packages.default` buildEnv is offered for.
       systems = [
@@ -65,13 +66,13 @@
       packages = forAllSystems (
         system:
         let
-          pkgs = import nixpkgs {
+          pkgs = mkPkgs {
+            input = nixpkgs;
             inherit system;
-            config = nixpkgsConfig;
           };
-          pkgsUnstable = import inputs.nixpkgs-unstable {
+          pkgsUnstable = mkPkgs {
+            input = inputs.nixpkgs-unstable;
             inherit system;
-            config = nixpkgsConfig;
           };
         in
         {
@@ -118,9 +119,9 @@
       # `nix fmt` formats the tree with the same tool the nixfmt check enforces.
       formatter = forAllSystems (
         system:
-        (import nixpkgs {
+        (mkPkgs {
+          input = nixpkgs;
           inherit system;
-          config = nixpkgsConfig;
         }).nixfmt
       );
     };

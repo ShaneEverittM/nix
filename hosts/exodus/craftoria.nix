@@ -43,7 +43,9 @@ let
   #     btrfs subvolume delete world
   #     btrfs subvolume create world
   #     chattr +C world              # NOCOW is inherited only by files created after
-  serverDir = "/home/shane/Servers/minecraft/craftoria2";
+  # Path shared with btrbk.nix via craftoria-paths.nix (the world subvolume it
+  # snapshots lives inside this dir).
+  serverDir = (import ./craftoria-paths.nix).serverDir;
 
   # Java 25 -- Craftoria 2 requires it (see the pack README). Headless from the system
   # closure, not the desktop JDK.

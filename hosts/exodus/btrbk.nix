@@ -30,6 +30,8 @@
   # .snapshots as its own subvolume on the top-level (subvolid=5, mounted at /), which is
   # itself never snapshotted -- keeps the snapshot tree out of the home timeline. `v`
   # makes a subvolume on btrfs, and only acts when the path doesn't already exist.
+  # (The world subvolume path below is shared with craftoria.nix via
+  # ./craftoria-paths.nix, so the two files cannot drift apart.)
   systemd.tmpfiles.rules = [
     "v /.snapshots 0755 root root -"
   ];
@@ -45,7 +47,7 @@
         snapshot_dir = ".snapshots";
         subvolume = {
           "home" = { };
-          "home/shane/Servers/minecraft/craftoria2/world" = { };
+          ${(import ./craftoria-paths.nix).worldSubvolume} = { };
         };
       };
     };

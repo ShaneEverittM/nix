@@ -23,19 +23,19 @@
 let
   inherit (inputs) nixpkgs home-manager;
   inherit (nixpkgs) lib;
-  nixpkgsConfig = import ./nixpkgs-config.nix { inherit lib; };
+  mkPkgs = import ./mk-pkgs.nix;
 
   pkgsFor =
     system:
-    import nixpkgs {
+    mkPkgs {
+      input = nixpkgs;
       inherit system;
-      config = nixpkgsConfig;
     };
   pkgsUnstableFor =
     system:
-    import inputs.nixpkgs-unstable {
+    mkPkgs {
+      input = inputs.nixpkgs-unstable;
       inherit system;
-      config = nixpkgsConfig;
     };
 
   # Generated hardware scans — we don't own their formatting, so keep them out of the

@@ -87,6 +87,17 @@ in
     programs.home-manager.enable = true;
     news.display = "silent";
 
+    # Store-vs-outOfStore dotfile source resolver, shared by the GUI modules
+    # (vscode/zed/warp/jetbrains) — previously copy-pasted into each. Lives on
+    # config.lib so consumers need no extra import beyond this module (which they
+    # already require for the dotfiles.mode/repoRoot options it reads).
+    lib.publicHome.sourceFile =
+      path:
+      if cfg.dotfiles.mode == "outOfStore" then
+        config.lib.file.mkOutOfStoreSymlink "${toString cfg.repoRoot}/${path}"
+      else
+        ../.. + "/${path}";
+
     # mkAfter keeps ~/.local/bin last in PATH — host modules (e.g. linux.nix's VS
     # Code dir) take precedence.
     home.sessionPath = lib.mkAfter [

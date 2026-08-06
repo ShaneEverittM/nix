@@ -5,14 +5,14 @@
 
 let
   identity = import ../../lib/identity.nix;
-  nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
-  pkgs = import inputs.nixpkgs {
+  mkPkgs = import ../../lib/mk-pkgs.nix;
+  pkgs = mkPkgs {
+    input = inputs.nixpkgs;
     inherit system;
-    config = nixpkgsConfig;
   };
-  pkgsUnstable = import inputs.nixpkgs-unstable {
+  pkgsUnstable = mkPkgs {
+    input = inputs.nixpkgs-unstable;
     inherit system;
-    config = nixpkgsConfig;
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {

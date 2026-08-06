@@ -9,16 +9,14 @@
 { inputs, system }:
 
 let
-  nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
   # Unstable lane. Feeds the shared fast-moving CLI tools (mise, acli), Zed, and Warp
   # (see home.packages below) — all fast movers that benefit from the newer channel.
-  # allowUnfree matches the system's stance in ./configuration.nix; the narrow shared
+  # allowUnfree matches the system's stance in the shared NixOS base; the narrow shared
   # predicate in lib/nixpkgs-config.nix only covers acli.
-  pkgsUnstable = import inputs.nixpkgs-unstable {
+  pkgsUnstable = import ../../lib/mk-pkgs.nix {
+    input = inputs.nixpkgs-unstable;
     inherit system;
-    config = nixpkgsConfig // {
-      allowUnfree = true;
-    };
+    extraConfig.allowUnfree = true;
   };
 in
 inputs.nixpkgs.lib.nixosSystem {

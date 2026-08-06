@@ -4,13 +4,7 @@
 { config, ... }:
 
 let
-  publicRoot = ../..;
-  sourceFile =
-    path:
-    if config.publicHome.dotfiles.mode == "outOfStore" then
-      config.lib.file.mkOutOfStoreSymlink "${toString config.publicHome.repoRoot}/${path}"
-    else
-      publicRoot + "/${path}";
+  inherit (config.lib.publicHome) sourceFile;
 in
 {
   home.file = {
