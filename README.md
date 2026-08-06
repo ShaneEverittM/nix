@@ -5,7 +5,9 @@ assemblies for
 
 - a **NixOS-on-WSL** system (user `shane`, host `nixos`),
 - a **bare-metal NixOS desktop** (host `exodus`, KDE Plasma; home-manager folded in as a
-  NixOS module), and
+  NixOS module),
+- a **headless NixOS home server** (host `rebirth`, a repurposed laptop; home-manager
+  folded in, git module only), and
 - a **personal macOS** machine (standalone home-manager, no nix-darwin)
 
 It is also designed to be consumed by private consumers, like at work
@@ -43,9 +45,11 @@ It is also designed to be consumed by private consumers, like at work
 | `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                    |
 | `hosts/exodus/default.nix`                     | nixosConfigurations.exodus (nixos + home linux + desktop).           |
 | `hosts/exodus/configuration.nix`               | exodus system layer (KDE Plasma, PipeWire, users, unfree, zsh).      |
+| `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (nixos + home git module only).          |
+| `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, avahi, openssh, lid-switch, zram).      |
 
 Why this shape: home-manager is the one layer every host shares, so the `modules/home/*`
-are the real reuse atom. The two Linux hosts (WSL and exodus) run NixOS and fold
+are the real reuse atom. The Linux hosts (WSL, exodus, and rebirth) run NixOS and fold
 home-manager in as a system module (sharing `modules/nixos/common.nix`); the Mac is
 standalone home-manager with no nix-darwin (the work Mac can't — MDM owns the system; the
 personal Mac doesn't need it). Platform splits happen by **which modules a host imports**,
@@ -56,7 +60,7 @@ The Linux side splits three ways, and the distinction matters: `linux.nix` is wh
 Linux host shares, `wsl.nix` holds everything that assumes a Windows side exists (the
 agent relay, the Windows Warp seeder, the Windows VS Code launcher), and
 `generic-linux.nix` holds the non-NixOS distro fixups that would be actively wrong on
-NixOS. Both Linux hosts run NixOS today, so `generic-linux.nix` has no in-repo consumer —
+NixOS. All Linux hosts run NixOS today, so `generic-linux.nix` has no in-repo consumer —
 it stays exported via `homeModules.genericLinux` for downstream non-NixOS Linux.
 Orthogonally, `desktop.nix` carries the GUI dotfiles for any machine with a graphical
 session — macOS and exodus share it; WSL does not, because the GUI apps there run on the
@@ -72,9 +76,10 @@ flake, or point to a local clone of this flake. Mergeable TOML config is generat
 Nix attrsets, so downstream consumers can overlay Cargo and Warp settings without text
 templates or appended TOML strings. This is what lets the public modules carry no
 identity/secrets: each host — and the private work repo — supplies its own. The
-interactive shell is **zsh everywhere**; macOS already defaults to it, and the two NixOS
-hosts set shane's login shell declaratively (`modules/nixos/wsl.nix` for WSL,
-`hosts/exodus/configuration.nix` for exodus). Everything is pinned to the
+interactive shell is **zsh everywhere** a human works interactively; macOS already
+defaults to it, and WSL and exodus set shane's login shell declaratively
+(`modules/nixos/wsl.nix` for WSL, `hosts/exodus/configuration.nix` for exodus). The
+headless `rebirth` keeps the default bash and imports only the git home module. Everything is pinned to the
 **nixos-25.11** release across the baseline inputs, with a single stable `nixpkgs`
 (`follows` threaded through the main inputs). A separate `nixpkgs-unstable` input is
 used only for the small cross-host package lane in `lib/unstable-packages.nix`, for
@@ -90,7 +95,7 @@ symlink, and GitHub Copilot gets a short entrypoint through
 
 ## Applying Changes
 
-**WSL and exodus (both NixOS):**
+**WSL, exodus, and rebirth (all NixOS):**
 
 ```bash
 nh os switch
@@ -103,8 +108,8 @@ nh home switch
 ```
 
 `nh os` builds the NixOS host matching the running system's hostname (`nixos` under WSL,
-`exodus` on the desktop). `nh home` auto-detects `<user>@<hostname>` and falls back to the
-`shane` alias on the Mac.
+`exodus` on the desktop, `rebirth` on the home server). `nh home` auto-detects
+`<user>@<hostname>` and falls back to the `shane` alias on the Mac.
 
 Edit the layer that fits the change, then rebuild. The flake is read from the git tree,
 so **new files must be `git add`-ed** before a rebuild/switch will see them.
@@ -238,6 +243,64 @@ holds the layout table), and the first switch **overwrites** the existing
 on any UI toggle, so as on macOS this is a seed-on-switch, not a locked file. Linux-only
 deltas belong in the host's `programs.warp.settings` (`system.force_x11` and an opacity
 override, for this KDE/Wayland session).
+
+## rebirth (NixOS home server) Notes
+
+`rebirth` is a home server built from a repurposed Razer laptop, running headless NixOS
+(lid-switch handling is `ignore` so closing the lid doesn't suspend it). It was folded
+in from a formerly standalone repo
+([`nix-server`](https://github.com/ShaneEverittM/nix-server), now archived — its
+pre-merge history lives there), where the host was named `nixos`; it was renamed on
+merge because that flake attr belongs to the WSL host. Machine shape:
+
+- Disk: btrfs subvolumes for `/`, `/home`, `/nix`; separate vfat `/boot`.
+- Networking: Wi-Fi via `networking.wireless` (wpa_supplicant), mDNS via Avahi
+  (reachable as `rebirth.local` on the LAN).
+- Home-manager is folded in as a NixOS module like the other NixOS hosts, but imports
+  only the git module — no core bundle, no GUI dotfiles.
+
+### First switch after the fold-in (or a rename)
+
+The box's running hostname must match its flake attr before plain `nh os switch` is
+safe: while the hostname is still `nixos`, hostname auto-detection would select the
+**WSL** configuration. For the first switch, name the host explicitly:
+
+```bash
+sudo nixos-rebuild switch --flake ~/.config/nix#rebirth
+```
+
+(and repoint the `~/.config/nix` checkout at this repo first — same path the old repo
+used, so `programs.nh.flake` is unchanged). After that switch the hostname is
+`rebirth`, plain `nh os switch` resolves correctly, and the box answers to
+`rebirth.local` instead of `nixos.local` — update any `~/.ssh/config` aliases on other
+machines.
+
+### Wi-Fi PSK secret
+
+`hosts/rebirth/configuration.nix` references the network's pre-shared key indirectly:
+
+```nix
+networking.wireless.networks."Marconi".pskRaw = "ext:psk_Marconi";
+networking.wireless.secretsFile = "/etc/wpa_supplicant/wireless.conf";
+```
+
+The `ext:psk_Marconi` value tells wpa_supplicant to read a variable named `psk_Marconi`
+from `secretsFile`. That file is **not** in this repo (it holds a secret) and must be
+created manually on the box:
+
+1. Compute the raw (hashed) PSK from the Wi-Fi passphrase:
+
+   ```bash
+   wpa_passphrase Marconi 'YOUR_WIFI_PASSWORD'
+   ```
+
+   Copy the `psk=` value (a 64-hex-char string) from the output.
+
+2. Write it into the secrets file as the `psk_Marconi` variable:
+
+   ```bash
+   echo 'psk_Marconi=PASTE_THE_64_HEX_HASH_HERE' | sudo tee /etc/wpa_supplicant/wireless.conf
+   ```
 
 ## WSL Notes
 

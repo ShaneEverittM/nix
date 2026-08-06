@@ -1,0 +1,35 @@
+{
+  // Project-level Zed settings, carried over from the folded-in nix-server repo so
+  // Zed-over-SSH sessions on the Linux hosts get nixd option docs + format-on-save.
+  // The nixd eval expressions assume the Linux checkout path (/home/shane/.config/nix);
+  // on the Mac that lookup fails harmlessly and nixd degrades to plain completion.
+  "languages": {
+    "JSONC": {
+      "tab_size": 2
+    },
+    "Nix": {
+      "language_servers": ["nixd", "!nil"],
+      "format_on_save": "on",
+      "formatter": {
+        "external": {
+          "command": "nixfmt",
+          "arguments": []
+        }
+      }
+    }
+  },
+  "lsp": {
+    "nixd": {
+      "settings": {
+        "nixpkgs": {
+          "expr": "import (builtins.getFlake \"/home/shane/.config/nix\").inputs.nixpkgs { }"
+        },
+        "options": {
+          "nixos": {
+            "expr": "(builtins.getFlake \"/home/shane/.config/nix\").nixosConfigurations.rebirth.options"
+          }
+        }
+      }
+    }
+  }
+}
