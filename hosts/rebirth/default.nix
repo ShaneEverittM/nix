@@ -27,15 +27,11 @@ inputs.nixpkgs.lib.nixosSystem {
             ../../modules/home/shell.nix
           ];
 
-          # Tools the shared modules alias/expect on PATH (git.nix: git-lfs +
-          # diff-so-fancy; shell.nix: eza + bat). Workstation hosts get these from
-          # lib/packages.nix via the core bundle; this host stays à la carte.
-          home.packages = with pkgs; [
-            git-lfs
-            diff-so-fancy
-            eza
-            bat
-          ];
+          # The shared stable CLI set — the same "comfy" tooling as every other host
+          # (and a superset of what git.nix/shell.nix expect on PATH). Deliberately
+          # not the unstable lane (mise, acli) or the rust/bun toolchains: those stay
+          # workstation concerns.
+          home.packages = import ../../lib/packages.nix pkgs;
 
           # The shared module signs commits; also sign tags.
           programs.git.settings.tag.gpgsign = true;

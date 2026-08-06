@@ -254,8 +254,8 @@ shape:
 - Networking: Wi-Fi via `networking.wireless` (wpa_supplicant), mDNS via Avahi
   (reachable as `rebirth.local` on the LAN), plus Tailscale from the shared base.
 - Home-manager is folded in via the shared base (git module + identity), and the host
-  adds only `shell.nix` and a handful of CLI tools — no core bundle, no GUI dotfiles,
-  no language toolchains.
+  adds `shell.nix` plus the shared stable CLI set (`lib/packages.nix`) — no core
+  bundle, no GUI dotfiles, no language toolchains, no unstable lane.
 
 ### First switch after the fold-in (or a rename)
 
