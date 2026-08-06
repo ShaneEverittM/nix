@@ -1,13 +1,19 @@
 result
 result-*
 
-# Scratch space for transcribing the work-Mac config — work-specific/private,
-# must never be committed to this public repo. Sort its contents into the
-# private nix-work repo, then delete. Gitignored => also invisible to the flake.
-migration/
-
 # Claude Code's isolated git worktrees (isolation: "worktree") — ephemeral,
 # machine-local checkouts. The worktree registration lives in .git/worktrees,
 # so ignoring the path here is safe. Scoped to worktrees/ so project-level
 # .claude config (settings.json, commands/) can still be committed if wanted.
 .claude/worktrees/
+
+# Machine-local Claude Code settings (permission grants, local paths). The
+# project-level .claude/settings.json stays committable; this file is the
+# by-convention local half and must not rely on a user-global ignore.
+.claude/settings.local.json
+
+# direnv cache (shell.nix enables direnv + nix-direnv on every host).
+.direnv/
+
+# macOS Finder droppings.
+.DS_Store

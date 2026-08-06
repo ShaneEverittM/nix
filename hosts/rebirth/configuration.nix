@@ -31,6 +31,6 @@ _:
 
   # This value determines the NixOS release from which the default settings for stateful
   # data (file locations, database versions) were taken. Leave it at the release of the
-  # first install; per-host, so it lives here rather than in modules/nixos/common.nix.
+  # first install; per-host, so it lives here rather than in the shared modules/nixos base.
   system.stateVersion = "26.05";
 }

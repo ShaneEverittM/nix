@@ -6,7 +6,7 @@
 # desktop). Hosts layer their tuning on top: exodus sets zram algorithm/size/priority,
 # a disk-swapfile overflow tier (hosts/exodus/swap.nix), and tighter earlyoom
 # thresholds.
-{ ... }:
+_:
 
 {
   zramSwap.enable = true;

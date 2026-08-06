@@ -1,6 +1,7 @@
 # Where SSH clients find the 1Password agent, as a typed option instead of a per-OS
-# conditional scattered through the shell config. Part of the core bundle so every host
-# can just flip it on.
+# conditional scattered through the shell config. Part of the workstation core bundle
+# so any host running the 1Password app can just flip it on (rebirth runs no 1Password
+# and signs/authenticates via the SSH agent forwarded from a workstation).
 #
 # 1Password exposes the agent at a different path on each platform, so the hosts
 # differ only in the value:

@@ -8,4 +8,4 @@ Key reminders:
 - Shared behavior belongs in `modules/home/*`; per-host public values belong in `hosts/*/default.nix` via `publicHome.*` options.
 - Keep `modules/home/common.nix` platform-agnostic and free of `nix.*` settings.
 - Put NixOS-only settings in `modules/home/linux.nix` or `modules/nixos/*`; put Mac-only GUI/home settings in `modules/home/darwin.nix` and its imported modules.
-- Format Nix with `nixfmt` and prefer `nix flake check --all-systems --no-build --no-write-lock-file --show-trace` for validation.
+- Format Nix with `nixfmt`; `nix flake check --all-systems --no-build --no-write-lock-file --show-trace` is the fast eval gate (CI additionally builds the checks per runner).

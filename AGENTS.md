@@ -11,8 +11,9 @@ This is a public, platform-agnostic Nix flake for Shane's personal machines:
 - `homeConfigurations."shane@macbook"` and `homeConfigurations.shane`: standalone home-manager for a personal macOS machine.
 - `homeModules.*` and `nixosModules.*`: reusable public modules consumed by a separate private work-Mac repo.
 
-Both NixOS hosts share `modules/nixos/common.nix` (boot, locale, user, sshd, tailscale,
-nh, and the home-manager fold-in with the identity from `lib/identity.nix`). "Linux" in
+Both NixOS hosts import the shared base bundle `modules/nixos/` (single-concern modules
+mirroring `modules/home/`: core, user, ssh, network, memory, btrfs — with the identity
+from `lib/identity.nix`). "Linux" in
 this repo means **any** Linux host; non-NixOS distro workarounds go in
 `generic-linux.nix`, which must never reach a NixOS host. All in-repo Linux hosts run
 NixOS, so `generic-linux.nix` currently has no in-repo consumer — it stays exported via
@@ -28,23 +29,26 @@ Keep this repo safe to publish. Do not add secrets, work-internal settings, toke
 | `flake.nix` | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env. |
 | `hosts/macbook/default.nix` | Personal Mac standalone home-manager assembly. No nix-darwin. |
 | `hosts/exodus/default.nix` | `exodus` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop). |
-| `hosts/exodus/configuration.nix` | `exodus` system layer: KDE Plasma, PipeWire, users, unfree allowance, zsh login shell. |
+| `hosts/exodus/configuration.nix` | `exodus` system layer: KDE Plasma, NVIDIA, PipeWire, crash handling; imports the craftoria/btrbk/swap/beszel siblings. |
 | `hosts/exodus/hardware-configuration.nix` | `exodus` generated hardware scan (filesystems, kernel modules). |
-| `hosts/rebirth/default.nix` | `rebirth` headless home-server assembly. Folds home-manager in (git module only). |
-| `hosts/rebirth/configuration.nix` | `rebirth` system layer: Wi-Fi (wpa_supplicant), avahi, openssh, lid-switch, zram. |
+| `hosts/rebirth/default.nix` | `rebirth` headless home-server assembly. Home layer: git (via base) + shell + shared CLI set. |
+| `hosts/rebirth/configuration.nix` | `rebirth` system layer: Wi-Fi (wpa_supplicant), lid-switch. |
 | `hosts/rebirth/hardware-configuration.nix` | `rebirth` generated hardware scan (filesystems, kernel modules). |
 | `modules/home/default.nix` | Universal home-manager core bundle. |
 | `modules/home/common.nix` | Owns the `publicHome.*` option namespace and shared cross-host config. |
-| `modules/home/{git,shell,rust,bun}.nix` | Shared home-manager behavior imported everywhere. |
+| `modules/home/{git,shell,rust,bun,java}.nix` | Shared home-manager behavior in the core bundle (git + shell are also on rebirth). |
 | `modules/home/onepassword.nix` | `SSH_AUTH_SOCK` for the 1Password agent; per-platform socket path. |
 | `modules/home/linux.nix` | Shared Linux layer. |
 | `modules/home/generic-linux.nix` | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS; downstream-only now. |
 | `modules/home/desktop.nix` | Cross-platform GUI dotfile bundle (vscode + zed + warp + jetbrains). |
 | `modules/home/darwin.nix` | macOS-only layer. Imports `desktop.nix`. |
 | `modules/home/{vscode,zed,warp,jetbrains}.nix` | Cross-platform dotfile/app modules; each resolves its own per-OS paths. |
-| `modules/home/warp-settings.nix` | Shared Warp settings attr schema used by all three Warp consumers. |
-| `modules/nixos/common.nix` | Shared NixOS base for both physical hosts: boot, locale, user, sshd, tailscale, nh, home-manager fold-in + identity. |
-| `lib/identity.nix` | Single-sourced public identity (name, email, SSH public key). |
+| `modules/home/warp-settings.nix` | Shared Warp settings attr schema (macOS + Linux). |
+| `modules/nixos/default.nix` | Shared NixOS base bundle; hosts import this. |
+| `modules/nixos/{core,user,ssh,network,memory,btrfs}.nix` | Single-concern base modules: nix/boot/locale/nh, account + hm fold-in, sshd, avahi/tailscale/resolved, zram/earlyoom, btrfs tuning. |
+| `lib/identity.nix` | Single-sourced public identity (login name, name, email, SSH public key). |
+| `lib/mk-pkgs.nix` | The one shared nixpkgs instantiation (unfree predicate baked in). |
+| `lib/checks.nix` | CI gates: lint checks, downstream contract checks, host toplevel builds. |
 | `lib/packages.nix` | Stable, platform-agnostic shared CLI package list. |
 | `lib/unstable-packages.nix` | Small platform-agnostic package lane from `nixpkgs-unstable`. |
 | `files/` | Public dotfiles used by home-manager modules. |
@@ -75,7 +79,8 @@ The `README.md` has the detailed human-facing explanation. Use this file for qui
 | Add git behavior | `modules/home/git.nix` |
 | Add host identity/path/value | the relevant `hosts/*/default.nix` via `publicHome.*` |
 | Add reusable per-host option | `modules/home/common.nix` or the owning module's `options.publicHome.*` |
-| Add NixOS behavior for every NixOS host | `modules/nixos/common.nix` |
+| Add NixOS behavior for every NixOS host | the matching single-concern `modules/nixos/*.nix` (new concerns: new module + bundle line in `modules/nixos/default.nix`) |
+| Add JVM/gradle behavior | `modules/home/java.nix` |
 | Add exodus-only system behavior | `hosts/exodus/configuration.nix` |
 | Add rebirth-only system behavior | `hosts/rebirth/configuration.nix` |
 | Change name/email/SSH public key | `lib/identity.nix` |
@@ -85,7 +90,7 @@ The `README.md` has the detailed human-facing explanation. Use this file for qui
 | Add macOS-only behavior | `modules/home/darwin.nix` |
 | Change shared Warp settings | `modules/home/warp-settings.nix` |
 | Change source dotfiles | `files/` |
-| Change CI eval | `.github/workflows/eval.yml` |
+| Change CI gates | `lib/checks.nix` (the workflow `.github/workflows/ci.yml` is just its driver) |
 
 ## Validation workflow
 
@@ -95,7 +100,10 @@ Prefer the narrowest check that covers your change, then run the broader eval wh
 # Format changed Nix files.
 nixfmt path/to/file.nix
 
-# CI-equivalent evaluation without building outputs or modifying flake.lock.
+# Fast local eval of every output without building or touching flake.lock.
+# NOT CI-equivalent: CI *builds* the checks for the runner's own system, so lint
+# gates and toplevels actually run there. To run a lint gate for real locally:
+#   nix build .#checks.aarch64-darwin.deadnix --no-link --no-write-lock-file
 nix flake check --all-systems --no-build --no-write-lock-file --show-trace
 
 # Optional targeted host evaluations.

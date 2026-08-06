@@ -1,6 +1,7 @@
-# Platform-agnostic home-manager config, shared by every host (NixOS, personal Mac,
-# work Mac). Anything here must hold on both Linux and Darwin — OS-specific bits live
-# in ./linux.nix and ./darwin.nix.
+# Platform-agnostic home-manager config, shared by every workstation host (exodus,
+# personal Mac, work Mac; the rebirth server skips the bundle and takes git/shell à la
+# carte). Anything here must hold on both Linux and Darwin — OS-specific bits live in
+# ./linux.nix and ./darwin.nix.
 #
 # This module owns the `publicHome.*` option namespace: the shared modules carry
 # behavior, each host (and the downstream private work repo) supplies the values

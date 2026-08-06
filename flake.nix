@@ -54,9 +54,9 @@
 
           # nh home auto-detects <username>@<hostname>, then <username>. Keep
           # this alias so the public Mac can use the short nh home commands even
-          # when its hostname is not literally "macbook". The Linux host is matched
-          # by its exact <username>@<hostname> above, so it never reaches this
-          # Darwin-only fallback.
+          # when its hostname is not literally "macbook". (The NixOS hosts fold
+          # home-manager into the system build and never use `nh home`, so this
+          # fallback is Darwin-only in practice.)
           shane = macbook;
         };
 

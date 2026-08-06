@@ -6,8 +6,7 @@
 # NOTE: system.stateVersion is intentionally NOT set anywhere in these modules — it is
 # per-host (the release each machine was first installed on) and lives in
 # hosts/<name>/configuration.nix.
-{ ... }:
-{
+_: {
   imports = [
     ./core.nix # nix settings, boot, locale, base tooling, nh
     ./user.nix # shane account + the home-manager fold-in with identity

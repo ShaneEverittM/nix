@@ -1,6 +1,6 @@
 # Hardened, key-only sshd shared by every host. Behind the home router the hosts are
 # reachable only from the LAN and the tailnet unless a port is forwarded.
-{ ... }:
+_:
 
 let
   identity = import ../../lib/identity.nix;

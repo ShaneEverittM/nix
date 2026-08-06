@@ -1,7 +1,7 @@
 # Network discovery + tailnet, shared by every host. The interface stack itself is
 # per-host (exodus: NetworkManager; rebirth: wpa_supplicant) and stays in each
 # hosts/<name>/configuration.nix.
-{ ... }:
+_:
 
 {
   # mDNS: advertise/resolve `*.local` on the LAN so each box answers to

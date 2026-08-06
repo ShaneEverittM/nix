@@ -22,7 +22,7 @@ in
 inputs.nixpkgs.lib.nixosSystem {
   inherit system;
 
-  # Thread the flake inputs to modules (modules/nixos/common.nix uses it for the
+  # Thread the flake inputs to modules (the shared base uses it for the
   # nixPath pin).
   specialArgs = { inherit inputs; };
 

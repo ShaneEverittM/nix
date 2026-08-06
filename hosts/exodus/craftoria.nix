@@ -45,7 +45,7 @@ let
   #     chattr +C world              # NOCOW is inherited only by files created after
   # Path shared with btrbk.nix via craftoria-paths.nix (the world subvolume it
   # snapshots lives inside this dir).
-  serverDir = (import ./craftoria-paths.nix).serverDir;
+  inherit (import ./craftoria-paths.nix) serverDir;
 
   # Java 25 -- Craftoria 2 requires it (see the pack README). Headless from the system
   # closure, not the desktop JDK.
