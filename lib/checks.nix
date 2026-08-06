@@ -63,7 +63,7 @@ let
 
       deadnix = pkgs.runCommandLocal "check-deadnix" { nativeBuildInputs = [ pkgs.deadnix ]; } ''
         cd ${self}
-        deadnix --fail ${lib.concatMapStringsSep " " (p: "--exclude '${p}'") generated} .
+        deadnix --fail --exclude ${lib.concatMapStringsSep " " (p: "'${p}'") generated} -- .
         touch $out
       '';
 
