@@ -25,6 +25,15 @@
     networks."Marconi".pskRaw = "ext:psk_Marconi";
   };
 
+  # systemd-resolved, so Tailscale configures split DNS over D-Bus (tailnet domains →
+  # 100.100.100.100, everything else → the DHCP resolver) instead of capturing and
+  # overwriting /etc/resolv.conf. Without it, tailscaled races dhcpcd at boot on this
+  # slow-associating Wi-Fi host: it captures resolv.conf before the DHCP nameserver
+  # lands, ends up with an empty upstream list, and every non-tailnet DNS query fails
+  # (observed post-`tailscale up`: MagicDNS names resolved, nothing else did).
+  # exodus doesn't need this — NetworkManager owns resolv.conf there.
+  services.resolved.enable = true;
+
   # System-wide packages.
   environment.systemPackages = with pkgs; [
     # For bootstrapping edits before remote editors work.
