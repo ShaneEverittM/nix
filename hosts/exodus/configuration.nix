@@ -11,9 +11,9 @@
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    # Craftoria 2 Minecraft server: native systemd service + host prereqs.
-    ./craftoria.nix
-    # btrbk: weekly local snapshots of home + the Craftoria world subvolume.
+    # Minecraft servers (ATM10, Craftoria 2): native systemd services + host prereqs.
+    ./minecraft
+    # btrbk: weekly local snapshots of home + the Minecraft world subvolumes.
     ./btrbk.nix
     # Disk swapfile: the low-priority overflow tier layered under zram.
     ./swap.nix
@@ -107,8 +107,8 @@
   # Install firefox.
   programs.firefox.enable = true;
 
-  # Memory-pressure resilience. 14 GiB RAM running a JVM Minecraft server (./craftoria.nix)
-  # alongside the desktop. Originally this box had zero swap, so a memory spike couldn't
+  # Memory-pressure resilience. 14 GiB RAM running a JVM Minecraft server (./minecraft)
+  # alongside the desktop — one pack at a time, for exactly this reason. Originally this box had zero swap, so a memory spike couldn't
   # evict anonymous pages: the kernel thrashed /nix/store code pages and livelocked instead
   # of OOM-killing — which is exactly how it hard-froze once (progressive kwin/pipewire/
   # libinput stalls → 31 s freeze → power cycle).

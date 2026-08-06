@@ -162,10 +162,11 @@ let
         exodus-toplevel = self.nixosConfigurations.exodus.config.system.build.toplevel;
         rebirth-toplevel = self.nixosConfigurations.rebirth.config.system.build.toplevel;
 
-        # Boots a VM and smoke-tests the craftoria console plumbing (FIFO socket +
-        # sandboxing) with a stand-in for the un-CI-able NeoForge server. NixOS VM tests
-        # need /dev/kvm, so the Linux CI job enables it (see .github/workflows/ci.yml).
-        craftoria-console = import ../tests/craftoria-console.nix { pkgs = pkgsFor system; };
+        # Boots a VM and smoke-tests both Minecraft servers' console plumbing (FIFO socket
+        # + sandboxing + the autoStart split) with stand-ins for the un-CI-able NeoForge
+        # servers. NixOS VM tests need /dev/kvm, so the Linux CI job enables it (see
+        # .github/workflows/ci.yml).
+        minecraft-console = import ../tests/minecraft-console.nix { pkgs = pkgsFor system; };
 
         # Boots the shared modules/nixos base (minus btrfs — its mount options assume
         # the real pools) and asserts behavior: hardened sshd on the wire, the
