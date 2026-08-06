@@ -1,5 +1,5 @@
 # NixOS home-server assembly: the `nixosConfigurations.rebirth` system. The shared
-# base (modules/nixos/common.nix) supplies boot, locale, the shane account, hardened
+# base bundle (modules/nixos/) supplies boot, locale, the shane account, hardened
 # sshd, Tailscale, nh, and the home-manager fold-in with the git module + identity —
 # so this file only stacks the server-appropriate home slice on top: the shared shell
 # setup, but no core bundle, GUI dotfiles, or language toolchains. Before the fold-in
@@ -10,13 +10,13 @@
 inputs.nixpkgs.lib.nixosSystem {
   inherit system;
 
-  # Thread the flake inputs to modules (modules/nixos/common.nix uses it for the
+  # Thread the flake inputs to modules (the shared base uses it for the
   # home-manager fold-in and the nixPath pin).
   specialArgs = { inherit inputs; };
 
   modules = [
     ./configuration.nix
-    ../../modules/nixos/common.nix
+    ../../modules/nixos
     {
       home-manager.users.shane =
         { pkgs, ... }:

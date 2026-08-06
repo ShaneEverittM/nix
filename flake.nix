@@ -109,7 +109,13 @@
       };
 
       nixosModules = {
-        default = import ./modules/nixos/common.nix;
+        default = import ./modules/nixos; # base bundle (core + user + ssh + network)
+
+        # Individual modules, for finer-grained composition (mirrors homeModules).
+        core = import ./modules/nixos/core.nix;
+        user = import ./modules/nixos/user.nix;
+        ssh = import ./modules/nixos/ssh.nix;
+        network = import ./modules/nixos/network.nix;
       };
 
       # CI gates as flake checks, so `nix flake check` runs the same lint + build

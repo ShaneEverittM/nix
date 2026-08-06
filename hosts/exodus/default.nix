@@ -28,9 +28,9 @@ inputs.nixpkgs.lib.nixosSystem {
 
   modules = [
     ./configuration.nix
-    # Shared physical-host base: boot, locale, users, sshd, tailscale, nh, and the
-    # home-manager fold-in with the personal identity (see modules/nixos/common.nix).
-    ../../modules/nixos/common.nix
+    # Shared physical-host base bundle: boot, locale, users, sshd, tailscale, nh, and
+    # the home-manager fold-in with the personal identity (see modules/nixos/).
+    ../../modules/nixos
     {
       home-manager.extraSpecialArgs = { inherit pkgsUnstable; };
       home-manager.users.shane =
