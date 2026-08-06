@@ -1,6 +1,7 @@
-# Platform-agnostic home-manager config, shared by every host (NixOS, personal Mac,
-# work Mac). Anything here must hold on both Linux and Darwin — OS-specific bits live
-# in ./linux.nix and ./darwin.nix.
+# Platform-agnostic home-manager config, shared by every workstation host (exodus,
+# personal Mac, work Mac; the rebirth server skips the bundle and takes git/shell à la
+# carte). Anything here must hold on both Linux and Darwin — OS-specific bits live in
+# ./linux.nix and ./darwin.nix.
 #
 # This module owns the `publicHome.*` option namespace: the shared modules carry
 # behavior, each host (and the downstream private work repo) supplies the values
@@ -73,12 +74,30 @@ in
   };
 
   config = {
-    home.username = cfg.username;
-    home.homeDirectory = cfg.homeDirectory;
-    home.stateVersion = "25.11";
+    # mkDefault, for two reasons: home-manager's NixOS module also sets
+    # username/homeDirectory (at normal priority, from users.users.*), and without
+    # the priority drop the NixOS hosts evaluate only while both sides happen to
+    # agree; and stateVersion is inherently per-consumer — the downstream work repo
+    # must be able to set its own without mkForce. 25.11 is the first-install anchor
+    # for the hosts that import this bundle (exodus, both Macs); rebirth was
+    # installed on 26.05 and sets its own in its assembly (it skips this bundle).
+    home.username = lib.mkDefault cfg.username;
+    home.homeDirectory = lib.mkDefault cfg.homeDirectory;
+    home.stateVersion = lib.mkDefault "25.11";
 
     programs.home-manager.enable = true;
     news.display = "silent";
+
+    # Store-vs-outOfStore dotfile source resolver, shared by the GUI modules
+    # (vscode/zed/warp/jetbrains) — previously copy-pasted into each. Lives on
+    # config.lib so consumers need no extra import beyond this module (which they
+    # already require for the dotfiles.mode/repoRoot options it reads).
+    lib.publicHome.sourceFile =
+      path:
+      if cfg.dotfiles.mode == "outOfStore" then
+        config.lib.file.mkOutOfStoreSymlink "${toString cfg.repoRoot}/${path}"
+      else
+        ../.. + "/${path}";
 
     # mkAfter keeps ~/.local/bin last in PATH — host modules (e.g. linux.nix's VS
     # Code dir) take precedence.

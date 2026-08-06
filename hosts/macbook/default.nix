@@ -5,14 +5,14 @@
 
 let
   identity = import ../../lib/identity.nix;
-  nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
-  pkgs = import inputs.nixpkgs {
+  mkPkgs = import ../../lib/mk-pkgs.nix;
+  pkgs = mkPkgs {
+    input = inputs.nixpkgs;
     inherit system;
-    config = nixpkgsConfig;
   };
-  pkgsUnstable = import inputs.nixpkgs-unstable {
+  pkgsUnstable = mkPkgs {
+    input = inputs.nixpkgs-unstable;
     inherit system;
-    config = nixpkgsConfig;
   };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
@@ -23,8 +23,8 @@ inputs.home-manager.lib.homeManagerConfiguration {
   };
 
   modules = [
-    ../../modules/home # core bundle (common + git + shell + rust + bun)
-    ../../modules/home/darwin.nix # Mac GUI bundle (vscode + warp + jetbrains)
+    ../../modules/home # core bundle (common + git + onepassword + shell + rust + bun + java)
+    ../../modules/home/darwin.nix # Mac GUI bundle (vscode + zed + warp + jetbrains)
     {
       # Personal git identity, single-sourced (already public). repoRoot defaults to
       # ~/.config/nix, which is also the default NH_HOME_FLAKE and out-of-store

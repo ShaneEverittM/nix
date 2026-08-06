@@ -14,7 +14,8 @@
   outputs =
     inputs@{ self, nixpkgs, ... }:
     let
-      nixpkgsConfig = import ./lib/nixpkgs-config.nix { inherit (nixpkgs) lib; };
+      # Shared nixpkgs instantiation (unfree predicate baked in) — see lib/mk-pkgs.nix.
+      mkPkgs = import ./lib/mk-pkgs.nix;
 
       # Systems the convenience `packages.default` buildEnv is offered for.
       systems = [
@@ -53,9 +54,9 @@
 
           # nh home auto-detects <username>@<hostname>, then <username>. Keep
           # this alias so the public Mac can use the short nh home commands even
-          # when its hostname is not literally "macbook". The Linux host is matched
-          # by its exact <username>@<hostname> above, so it never reaches this
-          # Darwin-only fallback.
+          # when its hostname is not literally "macbook". (The NixOS hosts fold
+          # home-manager into the system build and never use `nh home`, so this
+          # fallback is Darwin-only in practice.)
           shane = macbook;
         };
 
@@ -65,13 +66,13 @@
       packages = forAllSystems (
         system:
         let
-          pkgs = import nixpkgs {
+          pkgs = mkPkgs {
+            input = nixpkgs;
             inherit system;
-            config = nixpkgsConfig;
           };
-          pkgsUnstable = import inputs.nixpkgs-unstable {
+          pkgsUnstable = mkPkgs {
+            input = inputs.nixpkgs-unstable;
             inherit system;
-            config = nixpkgsConfig;
           };
         in
         {
@@ -87,7 +88,7 @@
       # homeModules.default + homeModules.darwin into a standalone home-manager
       # configuration.
       homeModules = {
-        default = import ./modules/home; # core bundle (common + git + shell + rust + bun)
+        default = import ./modules/home; # core bundle (common + git + onepassword + shell + rust + bun + java)
         linux = import ./modules/home/linux.nix; # shared Linux layer
         genericLinux = import ./modules/home/generic-linux.nix; # non-NixOS distro fixups
         darwin = import ./modules/home/darwin.nix; # Mac layer (pulls in desktop)
@@ -99,6 +100,7 @@
         shell = import ./modules/home/shell.nix;
         rust = import ./modules/home/rust.nix;
         bun = import ./modules/home/bun.nix;
+        java = import ./modules/home/java.nix;
         onepassword = import ./modules/home/onepassword.nix;
         vscode = import ./modules/home/vscode.nix;
         zed = import ./modules/home/zed.nix;
@@ -107,7 +109,15 @@
       };
 
       nixosModules = {
-        default = import ./modules/nixos/common.nix;
+        default = import ./modules/nixos; # base bundle (core + user + ssh + network + memory + btrfs)
+
+        # Individual modules, for finer-grained composition (mirrors homeModules).
+        core = import ./modules/nixos/core.nix;
+        user = import ./modules/nixos/user.nix;
+        ssh = import ./modules/nixos/ssh.nix;
+        network = import ./modules/nixos/network.nix;
+        memory = import ./modules/nixos/memory.nix;
+        btrfs = import ./modules/nixos/btrfs.nix;
       };
 
       # CI gates as flake checks, so `nix flake check` runs the same lint + build
@@ -117,9 +127,9 @@
       # `nix fmt` formats the tree with the same tool the nixfmt check enforces.
       formatter = forAllSystems (
         system:
-        (import nixpkgs {
+        (mkPkgs {
+          input = nixpkgs;
           inherit system;
-          config = nixpkgsConfig;
         }).nixfmt
       );
     };

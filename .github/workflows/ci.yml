@@ -45,7 +45,9 @@ jobs:
       # ~14 GB free on a stock Linux runner; reclaim space before the Nix store fills.
       - name: Free disk space
         if: matrix.free-disk
-        uses: jlumbroso/free-disk-space@main
+        # Pinned to a commit SHA — a mutable @main ref on a third-party action is an
+        # unnecessary supply-chain trust grant, even with read-only permissions.
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be # main, 2023-10-18
         with:
           tool-cache: false
 

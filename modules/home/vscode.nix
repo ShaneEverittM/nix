@@ -1,17 +1,11 @@
 # VS Code user settings/keybindings as out-of-store symlinks, so they stay live-
-# editable in the checked-out repo (publicHome.configRoot) rather than being copied
+# editable in the checked-out repo (publicHome.repoRoot) rather than being copied
 # read-only into the Nix store. Cross-platform (bundled via desktop.nix); the user
 # config dir differs per OS, hence the split below.
 { config, pkgs, ... }:
 
 let
-  publicRoot = ../..;
-  sourceFile =
-    path:
-    if config.publicHome.dotfiles.mode == "outOfStore" then
-      config.lib.file.mkOutOfStoreSymlink "${toString config.publicHome.repoRoot}/${path}"
-    else
-      publicRoot + "/${path}";
+  inherit (config.lib.publicHome) sourceFile;
   userConfigDir =
     if pkgs.stdenv.isDarwin then "Library/Application Support/Code/User" else ".config/Code/User";
 in

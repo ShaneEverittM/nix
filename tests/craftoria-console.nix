@@ -24,8 +24,9 @@ pkgs.testers.runNixOSTest {
       imports = [ ../hosts/exodus/craftoria.nix ];
 
       # The module runs the service as User=shane and the socket as SocketUser=shane,
-      # but the shane account itself is declared in configuration.nix, not the module --
-      # declare it here so both the unit's user and the FIFO owner exist.
+      # but the shane account itself is declared in modules/nixos/user.nix, which this
+      # test doesn't import -- declare it here so both the unit's user and the FIFO
+      # owner exist.
       users.users.shane = {
         isNormalUser = true;
         uid = 1000;

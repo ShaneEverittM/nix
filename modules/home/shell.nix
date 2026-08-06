@@ -2,9 +2,9 @@
 # lib/packages.nix (eza/bat) and zoxide.
 #
 # zsh is the interactive shell everywhere, but only NixOS can set the login shell
-# declaratively (modules/nixos/common.nix). macOS already defaults to zsh; on a non-NixOS
-# Linux distro the distro owns /etc/passwd, so it takes a one-time `chsh` (see the host
-# setup section of the README).
+# declaratively (modules/nixos/user.nix). macOS already defaults to zsh; on a non-NixOS
+# Linux distro the distro owns /etc/passwd, so a downstream consumer there needs a
+# one-time `chsh` (see modules/home/generic-linux.nix for that downstream-only case).
 {
   config,
   lib,

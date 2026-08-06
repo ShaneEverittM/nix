@@ -23,13 +23,14 @@
 # Snapshots on one disk are not a backup. The off-box `btrfs send -p` half of the plan is
 # deferred until there's a target host -- add a `target` under the volume then.
 #
-# Deliberately out of scope here (the plan's non-Minecraft btrfs items): compression
-# mount options, autoScrub, and the fstrim disable. zram already lives in
-# configuration.nix.
+# The mount-time/maintenance half (compression, autoScrub, fstrim) lives in the shared
+# modules/nixos/btrfs.nix; zram in the shared memory.nix + this host's tuning.
 {
   # .snapshots as its own subvolume on the top-level (subvolid=5, mounted at /), which is
   # itself never snapshotted -- keeps the snapshot tree out of the home timeline. `v`
   # makes a subvolume on btrfs, and only acts when the path doesn't already exist.
+  # (The world subvolume path below is shared with craftoria.nix via
+  # ./craftoria-paths.nix, so the two files cannot drift apart.)
   systemd.tmpfiles.rules = [
     "v /.snapshots 0755 root root -"
   ];
@@ -45,7 +46,7 @@
         snapshot_dir = ".snapshots";
         subvolume = {
           "home" = { };
-          "home/shane/Servers/minecraft/craftoria2/world" = { };
+          ${(import ./craftoria-paths.nix).worldSubvolume} = { };
         };
       };
     };

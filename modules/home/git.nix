@@ -96,7 +96,9 @@ in
           // lib.optionalAttrs (cfg.signingKey != null) { signingkey = cfg.signingKey; };
       }
       // lib.optionalAttrs (cfg.signingKey != null) {
+        # A host that signs commits signs tags too — same key, same trust story.
         commit.gpgsign = true;
+        tag.gpgsign = true;
       }
       // lib.optionalAttrs (cfg.signingKey != null || cfg.sshSigningProgram != null) {
         # Build the entire `gpg` block in ONE attrset literal so its dotted keys

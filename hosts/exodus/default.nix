@@ -9,30 +9,28 @@
 { inputs, system }:
 
 let
-  nixpkgsConfig = import ../../lib/nixpkgs-config.nix { lib = inputs.nixpkgs.lib; };
   # Unstable lane. Feeds the shared fast-moving CLI tools (mise, acli), Zed, and Warp
   # (see home.packages below) — all fast movers that benefit from the newer channel.
-  # allowUnfree matches the system's stance in ./configuration.nix; the narrow shared
+  # allowUnfree matches the system's stance in the shared NixOS base; the narrow shared
   # predicate in lib/nixpkgs-config.nix only covers acli.
-  pkgsUnstable = import inputs.nixpkgs-unstable {
+  pkgsUnstable = import ../../lib/mk-pkgs.nix {
+    input = inputs.nixpkgs-unstable;
     inherit system;
-    config = nixpkgsConfig // {
-      allowUnfree = true;
-    };
+    extraConfig.allowUnfree = true;
   };
 in
 inputs.nixpkgs.lib.nixosSystem {
   inherit system;
 
-  # Thread the flake inputs to modules (modules/nixos/common.nix uses it for the
+  # Thread the flake inputs to modules (the shared base uses it for the
   # nixPath pin).
   specialArgs = { inherit inputs; };
 
   modules = [
     ./configuration.nix
-    # Shared physical-host base: boot, locale, users, sshd, tailscale, nh, and the
-    # home-manager fold-in with the personal identity (see modules/nixos/common.nix).
-    ../../modules/nixos/common.nix
+    # Shared physical-host base bundle: boot, locale, users, sshd, tailscale, nh, and
+    # the home-manager fold-in with the personal identity (see modules/nixos/).
+    ../../modules/nixos
     {
       home-manager.extraSpecialArgs = { inherit pkgsUnstable; };
       home-manager.users.shane =
@@ -43,7 +41,7 @@ inputs.nixpkgs.lib.nixosSystem {
         }:
         {
           imports = [
-            ../../modules/home # core bundle (common + git + shell + rust + bun)
+            ../../modules/home # core bundle (common + git + onepassword + shell + rust + bun + java)
             ../../modules/home/linux.nix # shared Linux layer
             ../../modules/home/desktop.nix # GUI dotfiles (vscode + zed + warp + jetbrains)
             ./cider.nix # launcher entry for the out-of-store Cider AppImage

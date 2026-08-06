@@ -1,5 +1,5 @@
 # Bun runtime + ensure global @types/bun is installed for ad-hoc Bun scripts.
-# Shared by every host.
+# Part of the workstation core bundle (rebirth skips it).
 {
   config,
   lib,
