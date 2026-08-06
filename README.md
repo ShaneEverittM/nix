@@ -271,8 +271,12 @@ sudo nixos-rebuild switch --flake ~/.config/nix#rebirth
 (and repoint the `~/.config/nix` checkout at this repo first — same path the old repo
 used, so `programs.nh.flake` is unchanged). After that switch the hostname is
 `rebirth`, plain `nh os switch` resolves correctly, and the box answers to
-`rebirth.local` instead of `nixos.local` — update any `~/.ssh/config` aliases on other
-machines.
+`rebirth.local` instead of `nixos.local` — update any `~/.ssh/config` entries on other
+machines. That last step is load-bearing, not cosmetic: a `Host` block that no longer
+matches the new name silently stops applying `ForwardAgent`, and since this box does
+all git auth *and* commit signing through the forwarded agent, the symptom is git
+failing against GitHub (auth/signing errors) rather than anything obviously
+SSH-related.
 
 ### Wi-Fi PSK secret
 
