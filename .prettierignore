@@ -1,0 +1,9 @@
+# Machine-written.
+flake.lock
+result
+result-*
+
+# App-owned live dotfiles (out-of-store symlink targets): Zed/VS Code rewrite these in
+# their own style when edited through the app UI, and Warp themes are hand-tuned YAML.
+# A formatter gate here would fight the owning apps, so they keep native formatting.
+files/
