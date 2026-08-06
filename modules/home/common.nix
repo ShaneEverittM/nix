@@ -73,9 +73,16 @@ in
   };
 
   config = {
-    home.username = cfg.username;
-    home.homeDirectory = cfg.homeDirectory;
-    home.stateVersion = "25.11";
+    # mkDefault, for two reasons: home-manager's NixOS module also sets
+    # username/homeDirectory (at normal priority, from users.users.*), and without
+    # the priority drop the NixOS hosts evaluate only while both sides happen to
+    # agree; and stateVersion is inherently per-consumer — the downstream work repo
+    # must be able to set its own without mkForce. 25.11 is the first-install anchor
+    # for the hosts that import this bundle (exodus, both Macs); rebirth was
+    # installed on 26.05 and sets its own in its assembly (it skips this bundle).
+    home.username = lib.mkDefault cfg.username;
+    home.homeDirectory = lib.mkDefault cfg.homeDirectory;
+    home.stateVersion = lib.mkDefault "25.11";
 
     programs.home-manager.enable = true;
     news.display = "silent";
