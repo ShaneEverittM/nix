@@ -69,21 +69,19 @@ in
     # split as the shell logic above — otherwise ssh/git ignore a forwarded agent and
     # get pinned to this host's 1Password socket (dead in a headless SSH session).
     # The Match-exec block must sort before "*" (first value wins in ssh_config).
-    programs.ssh = {
-      enable = true;
-      # Don't inject home-manager's default Host * block; we only want the two
-      # IdentityAgent rules below, matching the prior hand-written config.
-      enableDefaultConfig = false;
-      settings = {
-        forwarded-agent = lib.hm.dag.entryBefore [ "default" ] {
-          header = ''Match exec "test -n \"$SSH_CONNECTION\""'';
-          IdentityAgent = "SSH_AUTH_SOCK";
-        };
-        default = {
-          header = "Host *";
-          # Quoted because the macOS socket path contains spaces.
-          IdentityAgent = ''"${cfg.sshAuthSock}"'';
-        };
+    #
+    # ./ssh.nix owns programs.ssh.enable and the per-host blocks; this module only
+    # contributes the two IdentityAgent entries, because they're 1Password-specific
+    # and a host with sshAgent = false wants the rest of the file regardless.
+    programs.ssh.settings = {
+      forwarded-agent = lib.hm.dag.entryBefore [ "default" ] {
+        header = ''Match exec "test -n \"$SSH_CONNECTION\""'';
+        IdentityAgent = "SSH_AUTH_SOCK";
+      };
+      default = {
+        header = "Host *";
+        # Quoted because the macOS socket path contains spaces.
+        IdentityAgent = ''"${cfg.sshAuthSock}"'';
       };
     };
   };

@@ -43,6 +43,7 @@ private hostnames, private registry URLs, or encrypted secret files.
 | `modules/home/common.nix`                                | Owns the `publicHome.*` option namespace and shared cross-host config.                                                              |
 | `modules/home/{git,shell,rust,bun,java}.nix`             | Shared home-manager behavior in the core bundle (git + shell are also on rebirth).                                                  |
 | `modules/home/onepassword.nix`                           | `SSH_AUTH_SOCK` for the 1Password agent; per-platform socket path.                                                                  |
+| `modules/home/ssh.nix`                                   | Owns `~/.ssh/config`: aliases for this repo's hosts, plus an `Include config.local` for non-public hosts.                           |
 | `modules/home/linux.nix`                                 | Shared Linux layer.                                                                                                                 |
 | `modules/home/generic-linux.nix`                         | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS; downstream-only now.                           |
 | `modules/home/desktop.nix`                               | Cross-platform GUI dotfile bundle (vscode + zed + warp + jetbrains).                                                                |
@@ -101,6 +102,7 @@ and workflow reminders.
 | Add shared CLI tool that needs unstable  | `lib/unstable-packages.nix`                                                                                               |
 | Add shell alias/init behavior            | `modules/home/shell.nix`                                                                                                  |
 | Add git behavior                         | `modules/home/git.nix`                                                                                                    |
+| Add an SSH host alias                    | `modules/home/ssh.nix` (non-public hosts go in an unmanaged `~/.ssh/config.local`)                                        |
 | Add host identity/path/value             | the relevant `hosts/*/default.nix` via `publicHome.*`                                                                     |
 | Add reusable per-host option             | `modules/home/common.nix` or the owning module's `options.publicHome.*`                                                   |
 | Add NixOS behavior for every NixOS host  | the matching single-concern `modules/nixos/*.nix` (new concerns: new module + bundle line in `modules/nixos/default.nix`) |
