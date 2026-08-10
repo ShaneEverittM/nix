@@ -29,7 +29,7 @@ It is also designed to be consumed by private consumers, like at work
 | `files/`                                       | public dotfiles; store or out-of-store per `dotfiles.mode`.                             |
 | `Brewfile`                                     | macOS casks/formulae base.                                                              |
 | `modules/home/`                                | home-manager modules (the universal sharing layer).                                     |
-| `modules/home/default.nix`                     | core bundle: common + git + onepassword + shell + rust + bun + java.                    |
+| `modules/home/default.nix`                     | core bundle: common + git + onepassword + ssh + shell + rust + bun + java.              |
 | `modules/home/common.nix`                      | publicHome.\* options, packages, stateVersion, news.silent.                             |
 | `modules/home/git.nix`                         | option-driven git; identity via publicHome.git.\*.                                      |
 | `modules/home/shell.nix`                       | zsh + zoxide/direnv, eza/bat aliases, uv/mise, Warp auto-warpify.                       |
@@ -37,6 +37,7 @@ It is also designed to be consumed by private consumers, like at work
 | `modules/home/bun.nix`                         | bun runtime + global @types/bun.                                                        |
 | `modules/home/java.nix`                        | LTS JDK + gradle, stable JAVA_HOME symlink for JetBrains.                               |
 | `modules/home/onepassword.nix`                 | SSH_AUTH_SOCK for the 1Password agent (per-platform path).                              |
+| `modules/home/ssh.nix`                         | owns `~/.ssh/config`: host aliases for this repo's machines + a local include.          |
 | `modules/home/linux.nix`                       | shared Linux layer.                                                                     |
 | `modules/home/generic-linux.nix`               | non-NixOS distro fixups: XDG dirs, locale, fontconfig.                                  |
 | `modules/home/desktop.nix`                     | cross-platform GUI bundle: vscode + zed + warp + jetbrains.                             |
@@ -379,3 +380,21 @@ rather than conditionals in the shell config. `modules/home/onepassword.nix` own
 
 rebirth runs no 1Password app: it has no secrets of its own, and signing/auth work
 through the SSH agent forwarded from whichever workstation is connected.
+
+## SSH client config
+
+`modules/home/ssh.nix` owns `~/.ssh/config`, so home-manager writes the whole file and
+refuses to activate over a hand-written one (`Existing file … would be clobbered` — move
+it aside, or switch once with `nh home switch -b bak`). It carries the `rebirth` and
+`exodus` aliases; `onepassword.nix` appends the `IdentityAgent` blocks on top of it.
+
+Block order is load-bearing: ssh_config keeps the **first** value it sees for a keyword,
+so the per-host blocks are `lib.hm.dag.entryBefore [ "forwarded-agent" "default" ]` to
+sort above the `Host *` block that carries the agent socket. A DAG edge to an absent
+entry is a no-op, so that ordering still holds on a host where `sshAgent` is off and
+neither entry exists.
+
+Anything that shouldn't be public — a host reachable only by its WAN address, say — goes
+in `~/.ssh/config.local`, which this module `Include`s ahead of every managed block.
+That file is unmanaged and outside the checkout; OpenSSH skips the include silently when
+it doesn't exist, so hosts without one need no opt-out.

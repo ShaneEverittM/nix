@@ -23,7 +23,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
   };
 
   modules = [
-    ../../modules/home # core bundle (common + git + onepassword + shell + rust + bun + java)
+    ../../modules/home # core bundle (common + git + onepassword + ssh + shell + rust + bun + java)
     ../../modules/home/darwin.nix # Mac GUI bundle (vscode + zed + warp + jetbrains)
     {
       # Personal git identity, single-sourced (already public). repoRoot defaults to

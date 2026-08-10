@@ -9,6 +9,7 @@
     ./common.nix # publicHome.* options, packages, stateVersion
     ./git.nix # option-driven git (identity supplied per-host)
     ./onepassword.nix # SSH_AUTH_SOCK for the 1Password agent (per-platform path)
+    ./ssh.nix # ~/.ssh/config: host aliases for this repo's machines
     ./shell.nix # zsh + ergonomics
     ./rust.nix # rustup + cargo
     ./bun.nix # bun runtime

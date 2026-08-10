@@ -88,7 +88,7 @@
       # homeModules.default + homeModules.darwin into a standalone home-manager
       # configuration.
       homeModules = {
-        default = import ./modules/home; # core bundle (common + git + onepassword + shell + rust + bun + java)
+        default = import ./modules/home; # core bundle (common + git + onepassword + ssh + shell + rust + bun + java)
         linux = import ./modules/home/linux.nix; # shared Linux layer
         genericLinux = import ./modules/home/generic-linux.nix; # non-NixOS distro fixups
         darwin = import ./modules/home/darwin.nix; # Mac layer (pulls in desktop)
@@ -102,6 +102,7 @@
         bun = import ./modules/home/bun.nix;
         java = import ./modules/home/java.nix;
         onepassword = import ./modules/home/onepassword.nix;
+        ssh = import ./modules/home/ssh.nix;
         vscode = import ./modules/home/vscode.nix;
         zed = import ./modules/home/zed.nix;
         warp = import ./modules/home/warp.nix;
