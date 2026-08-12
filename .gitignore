@@ -15,5 +15,12 @@ result-*
 # direnv cache (shell.nix enables direnv + nix-direnv on every host).
 .direnv/
 
+# uv-managed local environment for the Python NixOS test scripts.
+.venv/
+
+# Type-only link to the locked nixpkgs source for basedpyright; refreshed by
+# scripts/refresh-nixos-test-driver-types after cloning or updating nixpkgs.
+.nixpkgs-test-driver
+
 # macOS Finder droppings.
 .DS_Store

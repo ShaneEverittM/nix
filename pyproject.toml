@@ -1,0 +1,26 @@
+[project]
+name = "personal-nix-tests"
+version = "0.1.0"
+description = "Development tools for the NixOS VM test scripts"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "ruff>=0.14.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+# NixOS VM test scripts run inside nixos-test-driver rather than the uv environment.
+# The refresh script creates this ignored symlink from the flake's locked nixpkgs source
+# so basedpyright can resolve the driver's PEP 561 types without a fake PyPI dependency.
+[tool.basedpyright]
+executionEnvironments = [
+  { root = "tests", extraPaths = [".nixpkgs-test-driver"] },
+]

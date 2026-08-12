@@ -47,60 +47,15 @@ pkgs.testers.runNixOSTest {
       home-manager.users.${identity.username}.home.stateVersion = "26.05";
     };
 
-  testScript = ''
-    machine.wait_for_unit("multi-user.target")
-
-    with subtest("sshd is up and hardened"):
-        machine.wait_for_unit("sshd.service")
-        machine.wait_for_open_port(22)
-        # Assert the rendered config the module manages. (First attempt asserted on
-        # `sshd -T` instead; it exited 0 in this VM with output that matched nothing,
-        # so its dump is printed below as an unasserted diagnostic breadcrumb only —
-        # the wire tests are the real effective-behavior check.)
-        rendered = machine.succeed("cat /etc/ssh/sshd_config")
-        for expected in [
-            "PasswordAuthentication no",
-            "KbdInteractiveAuthentication no",
-            "PermitRootLogin no",
-            "AllowUsers ${identity.username}",
-        ]:
-            assert expected in rendered, f"sshd_config missing: {expected}"
-        print("sshd -T dump (diagnostic only):")
-        print(machine.succeed("sshd -T 2>&1 || true"))
-
-    with subtest("only publickey auth is offered on the wire"):
-        # A real client attempt, and a discriminating one: the server names its
-        # permitted auth methods in the denial. Hardened → "Permission denied
-        # (publickey)."; password auth enabled would read "(publickey,password)" and
-        # fail the exact-match assertion. The `ssh` guard keeps machine.fail honest —
-        # a missing client binary would otherwise fake the failure.
-        machine.succeed("command -v ssh")
-        denied = machine.fail(
-            "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no "
-            "-o NumberOfPasswordPrompts=0 ${identity.username}@127.0.0.1 true 2>&1"
-        )
-        assert "Permission denied (publickey)" in denied, f"unexpected denial: {denied!r}"
-
-    with subtest("discovery, DNS, and tailnet daemons are up"):
-        machine.wait_for_unit("avahi-daemon.service")
-        machine.wait_for_unit("systemd-resolved.service")
-        machine.succeed("resolvectl status >/dev/null")
-        # tailscaled runs unauthenticated until `tailscale up`; the contract here is
-        # that it starts and stays up, not that it joins a tailnet.
-        machine.wait_for_unit("tailscaled.service")
-
-    with subtest("memory backstops are armed"):
-        machine.wait_for_unit("earlyoom.service")
-        machine.succeed("swapon --show=NAME --noheadings | grep -q zram")
-
-    with subtest("home-manager fold-in produced the shared identity"):
-        # End-to-end through the fold-in: the activation unit ran, wrote shane's git
-        # config, and the identity plumbed through from lib/identity.nix.
-        email = machine.succeed(
-            "su - ${identity.username} -c 'git config --get user.email'"
-        ).strip()
-        assert email == "${identity.userEmail}", f"git user.email is {email!r}"
-        machine.succeed("getent passwd ${identity.username} | grep -q zsh")
-        machine.succeed("nh --version")
-  '';
+  # Keep the Nix expression focused on VM assembly. The only dynamic bridge is this
+  # entrypoint: the test-driver objects are passed to a typed external function, while
+  # replacements preserve the identity's single source of truth.
+  testScript =
+    builtins.replaceStrings
+      [ "@identityUsername@" "@identityUserEmail@" ]
+      [ identity.username identity.userEmail ]
+      ''
+        ${builtins.readFile ./base-smoke.py}
+        run(machine, subtest)
+      '';
 }

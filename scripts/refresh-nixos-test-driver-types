@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Point basedpyright at the NixOS test driver's typed source from this flake's locked
+# nixpkgs input. This is intentionally a symlink: the test driver belongs to nixpkgs,
+# not the project's uv environment.
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+nixpkgs_source="$(
+  cd "$repo_root"
+  nix eval --raw --impure --expr \
+    "let flake = builtins.getFlake \"path:$repo_root\"; in flake.inputs.nixpkgs.outPath"
+)"
+driver_source="$nixpkgs_source/nixos/lib/test-driver/src"
+link_path="$repo_root/.nixpkgs-test-driver"
+
+if [[ ! -d "$driver_source/test_driver" ]]; then
+  echo "NixOS test-driver source not found at $driver_source" >&2
+  exit 1
+fi
+
+if [[ -e "$link_path" && ! -L "$link_path" ]]; then
+  echo "Refusing to replace non-symlink path: $link_path" >&2
+  exit 1
+fi
+
+ln -sfn "$driver_source" "$link_path"
+echo "Linked $link_path -> $driver_source"
