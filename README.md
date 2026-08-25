@@ -257,10 +257,10 @@ reflexive `mkdir world` hands back a CoW directory with no error at all. Stop th
 `btrfs subvolume delete <serverDir>/world`, and let `systemd-tmpfiles --create` remake
 it.
 
-`hosts/exodus/btrbk.nix` does weekly timeline snapshots into `/.snapshots`. `home` and
-each world are listed **separately** because btrfs snapshots aren't recursive — without
-those extra lines the worlds would be silently skipped, which is the entire point of
-having given them subvolumes. The paths come off
+`hosts/exodus/btrbk.nix` does twice-daily timeline snapshots into `/.snapshots`. `home`
+and each world are listed **separately** because btrfs snapshots aren't recursive —
+without those extra lines the worlds would be silently skipped, which is the entire
+point of having given them subvolumes. The paths come off
 `publicMinecraft.servers.*.worldSubvolume` so they can't drift from the `serverDir` the
 units run in, and each carries an explicit `snapshot_name` of `<pack>-world`. That name
 is load-bearing with more than one pack: it defaults to the subvolume's basename, and
@@ -272,7 +272,46 @@ generated `btrbk-local` unit to quiesce each running server (`save-off` +
 `save-all flush`) around the run, so the world snapshots are consistent rather than
 merely crash-consistent. Not snapshotted: `/nix` (snapshots pin store paths and would
 defeat `nix-collect-garbage`) and `/` (subvolid=5). Snapshots on one disk are not a
-backup — the off-box `btrfs send -p` half is deferred until there's a target host.
+backup — they die with the fs, which a power loss (no UPS) can corrupt wholesale, not
+just tear a NOCOW file — so each snapshot is also pushed off-box with `btrfs send -p` to
+`rebirth`. rebirth authorizes the receive via `services.btrbk.sshAccess` in
+`hosts/rebirth/btrbk.nix` (a dedicated `btrbk` user, its key pinned to
+`ssh_filter_btrbk.sh` as a forced command with a NOPASSWD sudo rule for `btrfs receive`,
+so `PermitRootLogin=no` stays intact). The push needs a dedicated SSH key that is
+**not** in this repo — see the bootstrap below.
+
+**Off-box replication key (manual secret).** Like the Wi-Fi PSK, the private key lives
+out-of-band, referenced by path (`ssh_identity` in `hosts/exodus/btrbk.nix`). It is
+low-value and disposable — rebirth pins it to a receive-only forced command, so a lost
+key just means regenerating and re-committing the public half:
+
+1. Generate the dedicated keypair on exodus, as the `btrbk` service user:
+
+   ```bash
+   sudo -u btrbk ssh-keygen -t ed25519 -f /var/lib/btrbk/.ssh/id_ed25519 -N "" \
+     -C "btrbk exodus->rebirth"
+   ```
+
+   `-N ""` (no passphrase) is required for the unattended service; the private half
+   stays at `0700` under `/var/lib/btrbk/.ssh`, never in the repo.
+
+2. Copy the **public** half into rebirth's receiver config — the
+   `services.btrbk.sshAccess` entry's `key` in `hosts/rebirth/btrbk.nix` — and commit it
+   (a public key is safe to publish):
+
+   ```bash
+   sudo cat /var/lib/btrbk/.ssh/id_ed25519.pub
+   ```
+
+3. Switch **rebirth first** (creates the `btrbk` user, authorized key, sudo rule, and
+   receive dir), then exodus. Validate before moving data with a dry run — it also
+   auto-accepts rebirth's host key on first contact:
+
+   ```bash
+   sudo -u btrbk btrbk -c /etc/btrbk/local.conf dryrun
+   ```
+
+   The first real run is a full baseline (`home` + both worlds); do it on the **LAN**.
 
 **GPU (dual-GPU box).** Monitors are wired to the NVIDIA card (Turing RTX 2070 SUPER,
 PCI `01:00.0`); the AMD Raphael iGPU (`0f:00.0`) stays on `amdgpu` but drives no
