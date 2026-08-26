@@ -9,8 +9,9 @@
 # Snapshots are not recursive, so each world is listed *separately* from home even though
 # they live inside it -- without those lines the worlds would be silently skipped, which is
 # the whole point of giving them their own subvolumes. The worlds are NOCOW: the first
-# write to each block after a snapshot is forced back to CoW, so weekly (not a tight timer)
-# keeps that cost small.
+# write to each block after a snapshot is forced back to CoW -- but that cost measured
+# negligible on this NVMe, so the timer is driven by power-loss RPO (see onCalendar), not
+# by keeping the CoW-once count down.
 #
 # Snapshots are named `<pack>-world.<timestamp>` (see snapshot_name below). Craftoria's
 # pre-existing snapshots are from when it was the only pack and are named plain `world.*`;
@@ -28,8 +29,11 @@
 # and / (subvolid=5, not snapshottable). Both are already separate subvolumes, so this is
 # free.
 #
-# Snapshots on one disk are not a backup. The off-box `btrfs send -p` half of the plan is
-# deferred until there's a target host -- add a `target` under the volume then.
+# Snapshots on one disk are not a backup -- they die with the fs, which a sudden power
+# loss (this box has no UPS) can take out wholesale, not just tear a NOCOW file. So each
+# snapshot is also pushed off-box with `btrfs send -p` to rebirth (the target below); that
+# copy is the only thing that survives a dead local fs. rebirth authorizes the receive via
+# services.btrbk.sshAccess -- see hosts/rebirth/btrbk.nix.
 #
 # The mount-time/maintenance half (compression, autoScrub, fstrim) lives in the shared
 # modules/nixos/btrfs.nix; zram in the shared memory.nix + this host's tuning.
@@ -44,14 +48,38 @@
   ];
 
   services.btrbk.instances.local = {
-    onCalendar = "weekly";
+    # Twice daily (00:00 + 12:00). Raised from weekly for power-loss RPO: exodus has no
+    # UPS, so a badly-timed cut can tear a NOCOW world file; twice-daily bounds the
+    # rollback to ~12h instead of a week. Safe to tighten because the CoW-once cost below
+    # measured negligible on this NVMe and the save-all quiesce is imperceptible to
+    # players. NOTE: local snapshots share this disk -- they do NOT survive btrfs-tree
+    # corruption; the off-box target (below) is the defense for that failure mode.
+    onCalendar = "*-*-* 00,12:00:00";
     settings = {
       # Keep at least 2 days, then thin to weeklies for a month and monthlies for half a
       # year.
       snapshot_preserve_min = "2d";
       snapshot_preserve = "4w 6m";
+
+      # Off-box replication to rebirth. btrbk runs as the `btrbk` user; it connects as
+      # btrbk@rebirth with this dedicated key (private half stays here at 0700, never in
+      # the repo) and pushes each snapshot after it is taken. The remote `btrfs receive`
+      # is authorized + sudo-escalated by services.btrbk.sshAccess on rebirth. The remote
+      # backend inherits the local btrfs-progs-sudo, so remote btrfs runs prefixed with
+      # sudo, which rebirth's ssh_filter_btrbk.sh (--sudo) permits.
+      ssh_user = "btrbk";
+      ssh_identity = "/var/lib/btrbk/.ssh/id_ed25519";
+
+      # Retention on the off-box copy, kept longer than the local timeline since this is
+      # the durable one that outlives a dead local fs. Tunable.
+      target_preserve_min = "2d";
+      target_preserve = "7d 8w 12m";
       volume."/" = {
         snapshot_dir = ".snapshots";
+        # All subvolumes in this volume (home + every world) replicate here. btrbk's
+        # config serializer emits this before the subvolume blocks, so it binds to the
+        # volume, not the last subvolume.
+        target = "ssh://rebirth/var/lib/btrbk/exodus";
         # The world paths come off the module rather than being restated here: btrbk needs
         # the volume-relative form, and `worldSubvolume` is the read-only option in
         # ./minecraft/service.nix that derives it from the same serverDir the unit runs in,
