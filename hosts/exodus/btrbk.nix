@@ -47,6 +47,21 @@
     "v /.snapshots 0755 root root -"
   ];
 
+  # The generated btrbk-local unit has no network ordering of its own, and the timer is
+  # Persistent=true -- so after any downtime it fires seconds into boot, before tailscaled
+  # has brought up MagicDNS, and dies on "Could not resolve hostname rebirth" (the target
+  # resolves through the tailnet). Local snapshots are still taken on that run, but the
+  # off-box push is skipped and, because a target aborted, so is retention pruning.
+  # Order it after the network is actually up; the tailscaled edge is only an ordering
+  # (no wants), so a never-authenticated node still runs its local timeline.
+  systemd.services.btrbk-local = {
+    after = [
+      "network-online.target"
+      "tailscaled.service"
+    ];
+    wants = [ "network-online.target" ];
+  };
+
   services.btrbk.instances.local = {
     # Twice daily (00:00 + 12:00). Raised from weekly for power-loss RPO: exodus has no
     # UPS, so a badly-timed cut can tear a NOCOW world file; twice-daily bounds the
