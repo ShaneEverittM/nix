@@ -50,9 +50,6 @@ in
         if command -v uv >/dev/null 2>&1; then
           eval "$(uv generate-shell-completion zsh)"
         fi
-        if command -v mise >/dev/null 2>&1; then
-          eval "$(mise activate zsh)"
-        fi
       ''
       # zoxide must initialize last — after mise's chpwd hook — or it warns that
       # its hook may be shadowed. mkOrder 2000 puts it after every other init
