@@ -24,6 +24,7 @@ pkgs: with pkgs; [
 
   # General CLI
   jq
+  file # identify file types by content
   tokei # code line counter
   stow
   watch

@@ -12,6 +12,8 @@ _:
     # Grab the generated config from the installer, mostly just kernel modules and
     # filesystem mounts (btrfs subvolumes for /, /home, /nix; vfat /boot).
     ./hardware-configuration.nix
+    # Receive target for exodus's off-box snapshot replication.
+    ./btrbk.nix
   ];
 
   networking.hostName = "rebirth";
