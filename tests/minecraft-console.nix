@@ -26,6 +26,16 @@ pkgs.testers.runNixOSTest {
     {
       imports = [ ../hosts/exodus/minecraft ];
 
+      # Pin the autoStart split the script asserts on, independent of what the host
+      # currently runs. The pack list is imported for its paths and unit wiring, but
+      # which pack boots on exodus is an operational choice (both are off while the box
+      # is between homes) -- the test is about the plumbing holding for *an* autoStart
+      # pack and *a* dormant one, so it owns those inputs.
+      publicMinecraft.servers = {
+        atm10.autoStart = lib.mkForce true;
+        craftoria.autoStart = lib.mkForce false;
+      };
+
       # The module runs the services as User=shane and the sockets as SocketUser=shane,
       # but the shane account itself is declared in modules/nixos/user.nix, which this
       # test doesn't import -- declare it here so both the units' user and the FIFO
@@ -82,15 +92,15 @@ pkgs.testers.runNixOSTest {
     machine.succeed("test -d ${dirs.craftoria}/world")
     machine.succeed("[ \"$(stat -c %U ${dirs.atm10}/world)\" = shane ]")
 
-    # atm10 carries autoStart, so it and its FIFO socket come up on their own (%t = /run
-    # for a system unit). No user manager, no linger.
+    # atm10 carries autoStart (pinned above), so it and its FIFO socket come up on their
+    # own (%t = /run for a system unit). No user manager, no linger.
     machine.wait_until_succeeds("systemctl is-active atm10.socket")
     machine.wait_for_file("/run/atm10.stdin")
     machine.wait_until_succeeds("systemctl is-active atm10.service")
 
-    # craftoria does not: autoStart = false means no wantedBy on the service, and the
-    # socket has none of its own either, so the whole pair stays dormant. This is what
-    # keeps a 14 GiB host from booting two modded heaps.
+    # craftoria does not (also pinned): autoStart = false means no wantedBy on the
+    # service, and the socket has none of its own either, so the whole pair stays
+    # dormant. This is what keeps a 14 GiB host from booting two modded heaps.
     machine.fail("systemctl is-active craftoria.service")
     machine.fail("systemctl is-active craftoria.socket")
 
