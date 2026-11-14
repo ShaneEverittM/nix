@@ -1,5 +1,5 @@
 # Network discovery + tailnet, shared by every host. The interface stack itself is
-# per-host (exodus: NetworkManager; rebirth: wpa_supplicant) and stays in each
+# per-host (retreat: NetworkManager; rebirth: wpa_supplicant) and stays in each
 # hosts/<name>/configuration.nix.
 _:
 
@@ -24,11 +24,11 @@ _:
 
   # systemd-resolved, so Tailscale configures split DNS over D-Bus (tailnet domains →
   # 100.100.100.100, everything else → the DHCP resolver) instead of capturing and
-  # overwriting /etc/resolv.conf. Shared, not per-host: both boxes are on Wi-Fi and
-  # run tailscaled, so the boot race this ends is generic — with plain openresolv,
+  # overwriting /etc/resolv.conf. Shared, not per-host: both boxes run tailscaled
+  # (rebirth on Wi-Fi), so the boot race this ends is generic — with plain openresolv,
   # tailscaled can capture resolv.conf before the DHCP nameserver lands and end up
   # with an empty upstream list, blackholing every non-tailnet query (first observed
   # on rebirth post-`tailscale up`: MagicDNS names resolved, nothing else did).
-  # NetworkManager on exodus detects resolved and pushes DNS to it natively.
+  # NetworkManager on retreat detects resolved and pushes DNS to it natively.
   services.resolved.enable = true;
 }

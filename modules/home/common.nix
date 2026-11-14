@@ -1,4 +1,4 @@
-# Platform-agnostic home-manager config, shared by every workstation host (exodus,
+# Platform-agnostic home-manager config, shared by every workstation host (retreat,
 # personal Mac, work Mac; the rebirth server skips the bundle and takes git/shell à la
 # carte). Anything here must hold on both Linux and Darwin — OS-specific bits live in
 # ./linux.nix and ./darwin.nix.
@@ -79,7 +79,7 @@ in
     # the priority drop the NixOS hosts evaluate only while both sides happen to
     # agree; and stateVersion is inherently per-consumer — the downstream work repo
     # must be able to set its own without mkForce. 25.11 is the first-install anchor
-    # for the hosts that import this bundle (exodus, both Macs); rebirth was
+    # for the hosts that import this bundle (retreat, both Macs); rebirth was
     # installed on 26.05 and sets its own in its assembly (it skips this bundle).
     home.username = lib.mkDefault cfg.username;
     home.homeDirectory = lib.mkDefault cfg.homeDirectory;

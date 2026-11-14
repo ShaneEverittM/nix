@@ -1,4 +1,4 @@
-# Launcher entry for Cider (Apple Music client), exodus-only.
+# Launcher entry for Cider (Apple Music client), retreat-only.
 #
 # Cider ships as a paywalled AppImage with no stable URL, so it can't be fetched
 # reproducibly into the Nix store. Following the same out-of-store split this repo

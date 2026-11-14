@@ -33,7 +33,7 @@ jobs:
             free-disk: true
             kvm: true
           - system: aarch64-darwin
-            runs-on: macos-14
+            runs-on: macos-26
             free-disk: false
             kvm: false
 

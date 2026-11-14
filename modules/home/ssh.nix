@@ -40,7 +40,7 @@ in
         ForwardAgent = true;
       };
 
-      exodus = lib.hm.dag.entryBefore [ "forwarded-agent" "default" ] {
+      retreat = lib.hm.dag.entryBefore [ "forwarded-agent" "default" ] {
         User = cfg.username;
         ForwardAgent = true;
       };

@@ -1,4 +1,4 @@
-# The shared NixOS base for the physical hosts (exodus + rebirth), as a bundle of
+# The shared NixOS base for the physical hosts (retreat + rebirth), as a bundle of
 # single-concern modules — the same shape as modules/home/default.nix. Hosts import
 # this one file; a future host (or downstream consumer via nixosModules.*) can take
 # the pieces à la carte instead.

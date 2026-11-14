@@ -1,4 +1,4 @@
-# Disk swap for exodus: the low-priority *overflow* tier layered under zram.
+# Disk swap for retreat: the low-priority *overflow* tier layered under zram.
 #
 # This is the "genuine overflow capacity" the zram comment in ./configuration.nix flagged
 # as deferred. The two swaps are not redundant -- they're a hierarchy keyed on swap
@@ -63,8 +63,8 @@
     ];
   };
 
-  # 16 GiB: comfortably larger than RAM (14.5 GiB now, 32 GiB after the planned upgrade),
-  # so the overflow window survives the RAM bump without a resize. priority below zram's 100
+  # 16 GiB: sized when this install had 14.5 GiB of RAM; on the current 32 GB box it is
+  # half of RAM, which is still plenty for an overflow tier under zram. priority below zram's 100
   # keeps it strictly the second tier -- the kernel only spills here once zram is full.
   # Must stay in 0..32767; see the header on why negatives are silently ignored.
   swapDevices = [

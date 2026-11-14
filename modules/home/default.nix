@@ -1,4 +1,4 @@
-# The universal home-manager core, imported by the workstation hosts (exodus, personal
+# The universal home-manager core, imported by the workstation hosts (retreat, personal
 # Mac, work Mac). Platform-specific layers are imported alongside this: ./linux.nix
 # (+ ./desktop.nix) on native Linux, ./darwin.nix on the Macs. Exposed as
 # `homeModules.default` in flake.nix. (The rebirth server skips the bundle and imports

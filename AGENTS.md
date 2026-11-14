@@ -6,7 +6,7 @@ Guidance for AI coding agents working in this repository.
 
 This is a public, platform-agnostic Nix flake for Shane's personal machines:
 
-- `nixosConfigurations.exodus`: bare-metal NixOS KDE Plasma desktop, with home-manager
+- `nixosConfigurations.retreat`: bare-metal NixOS KDE Plasma desktop, with home-manager
   folded in as a module.
 - `nixosConfigurations.rebirth`: headless NixOS home server (repurposed laptop),
   home-manager folded in; only the shared git + shell home modules.
@@ -33,9 +33,9 @@ private hostnames, private registry URLs, or encrypted secret files.
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `flake.nix`                                              | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env.                                    |
 | `hosts/macbook/default.nix`                              | Personal Mac standalone home-manager assembly. No nix-darwin.                                                                       |
-| `hosts/exodus/default.nix`                               | `exodus` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop).                                        |
-| `hosts/exodus/configuration.nix`                         | `exodus` system layer: KDE Plasma, NVIDIA, PipeWire, crash handling; imports the minecraft/btrbk/swap/beszel siblings.              |
-| `hosts/exodus/hardware-configuration.nix`                | `exodus` generated hardware scan (filesystems, kernel modules).                                                                     |
+| `hosts/retreat/default.nix`                              | `retreat` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop).                                       |
+| `hosts/retreat/configuration.nix`                        | `retreat` system layer: KDE Plasma, PipeWire, crash handling; imports the minecraft/btrbk/swap/beszel siblings.                     |
+| `hosts/retreat/hardware-configuration.nix`               | `retreat` generated hardware scan (filesystems, kernel modules).                                                                    |
 | `hosts/rebirth/default.nix`                              | `rebirth` headless home-server assembly. Home layer: git (via base) + shell + shared CLI set.                                       |
 | `hosts/rebirth/configuration.nix`                        | `rebirth` system layer: Wi-Fi (wpa_supplicant), lid-switch.                                                                         |
 | `hosts/rebirth/hardware-configuration.nix`               | `rebirth` generated hardware scan (filesystems, kernel modules).                                                                    |
@@ -107,8 +107,8 @@ and workflow reminders.
 | Add reusable per-host option             | `modules/home/common.nix` or the owning module's `options.publicHome.*`                                                   |
 | Add NixOS behavior for every NixOS host  | the matching single-concern `modules/nixos/*.nix` (new concerns: new module + bundle line in `modules/nixos/default.nix`) |
 | Add JVM/gradle behavior                  | `modules/home/java.nix`                                                                                                   |
-| Add exodus-only system behavior          | `hosts/exodus/configuration.nix`                                                                                          |
-| Add/change a Minecraft pack              | `hosts/exodus/minecraft/default.nix` (a pack) or `minecraft/service.nix` (behavior every pack gets)                       |
+| Add retreat-only system behavior         | `hosts/retreat/configuration.nix`                                                                                         |
+| Add/change a Minecraft pack              | `hosts/retreat/minecraft/default.nix` (a pack) or `minecraft/service.nix` (behavior every pack gets)                      |
 | Add rebirth-only system behavior         | `hosts/rebirth/configuration.nix`                                                                                         |
 | Change name/email/SSH public key         | `lib/identity.nix`                                                                                                        |
 | Add behavior for every Linux host        | `modules/home/linux.nix`                                                                                                  |
@@ -135,7 +135,7 @@ nixfmt path/to/file.nix
 nix flake check --all-systems --no-build --no-write-lock-file --show-trace
 
 # Optional targeted host evaluations.
-nix eval .#nixosConfigurations.exodus.config.system.build.toplevel.drvPath --no-write-lock-file
+nix eval .#nixosConfigurations.retreat.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#nixosConfigurations.rebirth.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#homeConfigurations."shane@macbook".activationPackage.drvPath --no-write-lock-file
 ```
@@ -152,7 +152,7 @@ Notes:
 ## Commit hygiene
 
 - Use Conventional Commits for commit messages, e.g. `docs: add agent guidance`,
-  `feat: add shared shell helper`, `fix(exodus): correct warp path`.
+  `feat: add shared shell helper`, `fix(retreat): correct warp path`.
 - Do not create commits unless explicitly asked.
 - Before proposing or creating a commit, inspect `git status --short` and the relevant
   diff so unrelated user work is not staged.
@@ -177,13 +177,13 @@ driver) instead of a bare rev bump.
 
   ```bash
   base=$(nix build --no-link --print-out-paths \
-    'github:ShaneEverittM/nix/main#nixosConfigurations.exodus.config.system.build.toplevel')
+    'github:ShaneEverittM/nix/main#nixosConfigurations.retreat.config.system.build.toplevel')
   head=$(nix build --no-link --print-out-paths \
-    '.#nixosConfigurations.exodus.config.system.build.toplevel')
+    '.#nixosConfigurations.retreat.config.system.build.toplevel')
   nix run nixpkgs#nvd -- diff "$base" "$head"
   ```
 
-- **Per output.** The diff is specific to what you built (`exodus`, `rebirth`, or the
+- **Per output.** The diff is specific to what you built (`retreat`, `rebirth`, or the
   macbook home `activationPackage`); the toolchain-level changes that actually break
   things are largely shared across them, so one representative host's diff is usually
   enough — note which one it is.

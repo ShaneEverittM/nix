@@ -10,7 +10,7 @@
 #                  gates (source-only, cheap), plus the `packages.default` buildEnv and
 #                  the exported formatter — outputs that would otherwise never be built
 #                  before someone ran them.
-#   x86_64-linux : both NixOS toplevels (exodus desktop + rebirth server) build — this is
+#   x86_64-linux : both NixOS toplevels (retreat desktop + rebirth server) build — this is
 #                  what catches build-time breakage that pure eval misses, e.g. a wrong
 #                  Warp AppImage hash or a broken substituteInPlace — plus
 #                  `downstream-linux`, the genericLinux flavor of the downstream check.
@@ -46,7 +46,7 @@ let
   # Generated hardware scans — we don't own their formatting, so keep them out of the
   # source-hygiene gates.
   generated = [
-    "./hosts/exodus/hardware-configuration.nix"
+    "./hosts/retreat/hardware-configuration.nix"
     "./hosts/rebirth/hardware-configuration.nix"
   ];
 
@@ -159,7 +159,7 @@ let
     exportedOutputs system
     // {
       x86_64-linux = {
-        exodus-toplevel = self.nixosConfigurations.exodus.config.system.build.toplevel;
+        retreat-toplevel = self.nixosConfigurations.retreat.config.system.build.toplevel;
         rebirth-toplevel = self.nixosConfigurations.rebirth.config.system.build.toplevel;
 
         # Boots a VM and smoke-tests both Minecraft servers' console plumbing (FIFO socket

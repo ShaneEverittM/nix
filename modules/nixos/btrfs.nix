@@ -1,6 +1,6 @@
 # btrfs tuning shared by every host — both boxes have the same single-disk layout
 # (btrfs pool with /, home, nix; root is the top level, subvolid=5). The snapshot half
-# lives per-host (exodus: hosts/exodus/btrbk.nix); this is the mount-time and
+# lives per-host (retreat: hosts/retreat/btrbk.nix); this is the mount-time and
 # maintenance half. Everything here is the "uncontroversial" subset — nothing that can
 # lose data, only things that trade a little CPU for less disk and fewer bit-rot
 # surprises. On a single disk with no redundancy the monthly scrub can only *report*
@@ -12,8 +12,8 @@
 # extents stay as-is until rewritten; a one-shot `btrfs filesystem defragment -czstd
 # -r` (run by hand, post-reboot) recompresses data already on disk. `compsize` shows
 # on-disk vs logical size to confirm it took. NOCOW subvolumes are never compressed by
-# nature, and `-r` defragment must SKIP them or they're forced back to CoW — on exodus
-# that's the Craftoria world (see hosts/exodus/craftoria.nix).
+# nature, and `-r` defragment must SKIP them or they're forced back to CoW — on retreat
+# that's the Craftoria world (see hosts/retreat/craftoria.nix).
 #
 # hardware-configuration.nix is generated ("Do not modify this file!"), so we don't
 # touch its fileSystems entries — instead we *add* options here. NixOS merges
