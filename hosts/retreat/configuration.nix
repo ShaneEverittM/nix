@@ -1,8 +1,8 @@
-# System configuration for `exodus`, a bare-metal KDE Plasma desktop on NixOS.
+# System configuration for `retreat`, a bare-metal KDE Plasma desktop on NixOS
+# (Minisforum MS-A2; the install was migrated on its NVMe from the retired `exodus`).
 # Host assembly (home-manager, shared NixOS modules) lives in ./default.nix; this file
 # is the system-only layer — hardware, desktop environment, users, and services.
 {
-  config,
   pkgs,
   ...
 }:
@@ -24,7 +24,7 @@
   programs._1password.enable = true;
   programs._1password-gui.enable = true;
 
-  networking.hostName = "exodus";
+  networking.hostName = "retreat";
   networking.networkmanager.enable = true;
 
   # KDE Plasma 6 on Wayland, with the SDDM display manager.
@@ -45,29 +45,11 @@
     enable32Bit = true;
   };
 
-  # Dual-GPU desktop: the monitors are wired to the NVIDIA card (Turing, PCI 01:00.0),
-  # and the AMD Raphael iGPU (0f:00.0) stays on amdgpu but drives no display. So NVIDIA
-  # is simply the primary driver — no PRIME offload/sync, which is a laptop concern
-  # (dGPU that can't reach the internal panel). videoDrivers = ["nvidia"] also
-  # blacklists nouveau.
-  services.xserver.videoDrivers = [ "nvidia" ];
-  hardware.nvidia = {
-    # Required for the Wayland (KDE Plasma 6) session; also fixes most tearing.
-    modesetting.enable = true;
-
-    # Proprietary kernel module: the mature path for this Turing card (the open module
-    # is best-tested on Ampere and newer).
-    open = false;
-
-    # Ship nvidia-settings.
-    nvidiaSettings = true;
-
-    # Desktop that stays plugged in — no need for the suspend/resume power management
-    # path (which is more prone to resume glitches). Enable later if needed.
-    powerManagement.enable = false;
-
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
-  };
+  # Single-GPU box: the Minisforum MS-A2's Radeon iGPU drives every output on the
+  # in-kernel amdgpu driver, which the default modesetting stack picks up on its own --
+  # so there is deliberately no videoDrivers / hardware.nvidia here. (This config was
+  # carried over, disk and all, from `exodus`, a dual-GPU tower whose NVIDIA card owned
+  # the displays; see git history for that setup.)
 
   # Sound with PipeWire.
   services.pulseaudio.enable = false;
@@ -107,11 +89,14 @@
   # Install firefox.
   programs.firefox.enable = true;
 
-  # Memory-pressure resilience. 14 GiB RAM running a JVM Minecraft server (./minecraft)
-  # alongside the desktop — one pack at a time, for exactly this reason. Originally this box had zero swap, so a memory spike couldn't
-  # evict anonymous pages: the kernel thrashed /nix/store code pages and livelocked instead
-  # of OOM-killing — which is exactly how it hard-froze once (progressive kwin/pipewire/
-  # libinput stalls → 31 s freeze → power cycle).
+  # Memory-pressure resilience, tuned on this install's previous hardware (`exodus`,
+  # 14 GiB) and carried over unchanged to this 32 GB box -- the headroom is far larger
+  # now, so the thresholds below are conservative rather than load-bearing; retune if
+  # they ever misfire. The history: a JVM Minecraft server (./minecraft) alongside the
+  # desktop with zero swap meant a memory spike couldn't evict anonymous pages: the
+  # kernel thrashed /nix/store code pages and livelocked instead of OOM-killing -- which
+  # is exactly how exodus hard-froze once (progressive kwin/pipewire/libinput stalls →
+  # 31 s freeze → power cycle).
   #
   # Two swap tiers now (see ./swap.nix for the priority hierarchy). zram: compressed in-RAM
   # swap (prio 100) so anon pages become reclaimable and the kernel/oomd can act cleanly —

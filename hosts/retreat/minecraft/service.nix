@@ -1,7 +1,7 @@
 # Modded Minecraft servers, served natively by systemd — one unit per pack, generated
 # from `publicMinecraft.servers.<name>`. Instances live in ./default.nix.
 #
-# Lineage: this is hosts/exodus/craftoria.nix generalized. That file was itself carried
+# Lineage: this is hosts/retreat/craftoria.nix generalized. That file was itself carried
 # over from vaulthunters.nix (console FIFO + RCON + sandboxing) and promoted from a user
 # unit to a system service. The tuning comments below that reference real crashes
 # (perf_event_open SIGSYS, AF_NETLINK, THP vs G1) were earned across all three packs and

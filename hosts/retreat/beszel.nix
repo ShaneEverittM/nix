@@ -52,8 +52,8 @@
     # login and reached `Running`; that lands ~1.5s later here, so this oneshot lost
     # the race and died with "unexpected state: NoState" on every boot (a manual
     # restart always worked, which is what made it look intermittent). The wait is
-    # generous because this host is on wifi — association and the login round trip
-    # can both be slow. On a never-authenticated node the state stays `NeedsLogin`
+    # generous because it was sized for wifi (association and the login round trip
+    # can both be slow); the host is wired now, so it simply never gets used up. On a never-authenticated node the state stays `NeedsLogin`
     # and this fails after the timeout with that state named in the journal, which
     # is the honest signal to go run `tailscale up`.
     preStart = ''

@@ -1,4 +1,4 @@
-# btrbk: local timeline snapshots of the irreproducible data on exodus. Scoped, per the
+# btrbk: local timeline snapshots of the irreproducible data on retreat. Scoped, per the
 # btrfs plan, to the things that can't just be re-downloaded:
 #   - home  : SSH keys, uncommitted branches, dotfiles not yet in this flake.
 #   - each Minecraft world subvolume (see ./minecraft), which a modpack/version bump can
@@ -63,7 +63,7 @@
   };
 
   services.btrbk.instances.local = {
-    # Twice daily (00:00 + 12:00). Raised from weekly for power-loss RPO: exodus has no
+    # Twice daily (00:00 + 12:00). Raised from weekly for power-loss RPO: retreat has no
     # UPS, so a badly-timed cut can tear a NOCOW world file; twice-daily bounds the
     # rollback to ~12h instead of a week. Safe to tighten because the CoW-once cost below
     # measured negligible on this NVMe and the save-all quiesce is imperceptible to
@@ -94,6 +94,8 @@
         # All subvolumes in this volume (home + every world) replicate here. btrbk's
         # config serializer emits this before the subvolume blocks, so it binds to the
         # volume, not the last subvolume.
+        # "exodus" is this install's former hostname; the path is kept so the existing
+        # received snapshots stay the incremental parents (renaming forces a full resend).
         target = "ssh://rebirth/var/lib/btrbk/exodus";
         # The world paths come off the module rather than being restated here: btrbk needs
         # the volume-relative form, and `worldSubvolume` is the read-only option in

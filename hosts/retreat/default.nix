@@ -1,4 +1,4 @@
-# NixOS desktop assembly: the `nixosConfigurations.exodus` system — NixOS with
+# NixOS desktop assembly: the `nixosConfigurations.retreat` system — NixOS with
 # home-manager folded in as a module, for a bare-metal KDE desktop. Formerly a
 # standalone home-manager config on CachyOS (see git history); now Nix owns the
 # whole box.
@@ -97,13 +97,12 @@ inputs.nixpkgs.lib.nixosSystem {
           # Warp is installed from Nix here (see home.packages below); this module still
           # only owns its config, under the XDG paths Warp uses on Linux.
           programs.warp.settings = {
-            # Native Wayland, not XWayland. Needs BOTH fixes below to hold: the
-            # waylandSupport override on the package (adds libwayland-client to the
-            # autoPatchelf runtime path so winit can dlopen it, and sets
-            # WARP_ENABLE_WAYLAND=1) and the VK_DRIVER_FILES pin (so wgpu renders on the
-            # NVIDIA card, not the AMD iGPU that can't present to the NVIDIA-owned
-            # surface). Without either, Warp crashes on startup and rewrites this key
-            # back to true at runtime.
+            # Native Wayland, not XWayland. Needs the waylandSupport override on the
+            # package (adds libwayland-client to the autoPatchelf runtime path so winit
+            # can dlopen it, and sets WARP_ENABLE_WAYLAND=1); without it Warp crashes on
+            # startup and rewrites this key back to true at runtime. (The old dual-GPU
+            # exodus also needed a VK_DRIVER_FILES pin to the NVIDIA ICD; with a single
+            # amdgpu device there is nothing for wgpu to pick wrong.)
             system.force_x11 = false;
 
             # Less transparent than the Macs' 70: KDE's compositor blurs differently, so
@@ -111,20 +110,6 @@ inputs.nixpkgs.lib.nixosSystem {
             # appearance.window block, so override_blur and zoom_level still come from it.
             appearance.window.override_opacity = 90;
           };
-
-          # Pin the Vulkan loader to the NVIDIA ICD. wgpu (Warp's renderer) enumerates
-          # both GPUs and picks the AMD iGPU, which can't present to a Wayland surface on
-          # the NVIDIA-driven outputs — Warp then crashes on startup and disables Wayland.
-          # The iGPU drives no display on this box, so pinning *every* Vulkan app to the
-          # NVIDIA card is exactly what we want. Both arch ICDs are listed (64- then
-          # 32-bit) so 32-bit Vulkan — Steam/Proton — still resolves; the loader uses the
-          # arch-matching entry.
-          #
-          # systemd.user.sessionVariables (→ ~/.config/environment.d), not
-          # home.sessionVariables: the failing path is launching from the KDE launcher,
-          # which never sources hm-session-vars.sh. environment.d *is* read by the
-          # graphical session (and shells it spawns). Takes effect on next login.
-          systemd.user.sessionVariables.VK_DRIVER_FILES = "/run/opengl-driver/share/vulkan/icd.d/nvidia_icd.json:/run/opengl-driver-32/share/vulkan/icd.d/nvidia_icd.json";
 
           # Desktop apps that came from the CachyOS distro before this migration now come
           # from Nix (Nix already owns their config via desktop.nix). Warp and Zed track

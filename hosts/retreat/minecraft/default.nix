@@ -1,10 +1,12 @@
-# The modpacks exodus serves. Everything mechanical -- units, console FIFO, RCON wrapper,
+# The modpacks retreat serves. Everything mechanical -- units, console FIFO, RCON wrapper,
 # readiness probe, sandboxing, world subvolume, btrbk quiescing -- lives in ./service.nix;
 # this file is only which packs exist and what is different about each.
 #
-# ONE AT A TIME. exodus has 14 GiB and a KDE session on top; two modded heaps do not fit,
-# and the failure mode is not a clean OOM kill but the thrash-to-livelock this host has
-# already hit once (see the memory notes in ../configuration.nix). So exactly one pack
+# ONE AT A TIME. This rule dates from the install's previous hardware (exodus: 14 GiB and
+# a KDE session on top), where two modded heaps did not fit and the failure mode was not a
+# clean OOM kill but a thrash-to-livelock (see the memory notes in ../configuration.nix).
+# retreat has 32 GB, so it is now policy rather than necessity -- see the last paragraph
+# for what relaxing it takes. Until then exactly one pack
 # carries autoStart = true and the other is started by hand:
 #     systemctl stop atm10 && systemctl start craftoria
 #
@@ -15,8 +17,8 @@
 # that "something answered on RCON" no longer identifies a pack, which is why
 # `<name>-console` checks its own unit state before dialing (see ../minecraft/service.nix).
 #
-# Worlds are separate subvolumes regardless, so there is nothing to untangle if the RAM
-# upgrade later makes concurrent packs worth it -- that is a port change plus autoStart,
+# Worlds are separate subvolumes regardless, so there is nothing to untangle if
+# concurrent packs become worth it -- that is a port change plus autoStart,
 # not a migration.
 { pkgs, ... }:
 
