@@ -28,8 +28,8 @@ pkgs.testers.runNixOSTest {
 
       # Pin the autoStart split the script asserts on, independent of what the host
       # currently runs. The pack list is imported for its paths and unit wiring, but
-      # which pack boots on retreat is an operational choice (both are off while the box
-      # is between homes) -- the test is about the plumbing holding for *an* autoStart
+      # which pack boots on retreat is an operational choice (both were off while the box
+      # was between homes) -- the test is about the plumbing holding for *an* autoStart
       # pack and *a* dormant one, so it owns those inputs.
       publicMinecraft.servers = {
         atm10.autoStart = lib.mkForce true;

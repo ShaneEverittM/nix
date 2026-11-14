@@ -44,7 +44,7 @@ in
       # enable-rcon=false and no rcon password); the preflight fails the start until it does.
       port = 25565;
       rconPort = 25575;
-      autoStart = false;
+      autoStart = true;
     };
 
     # Craftoria 2: NeoForge 26.1.2.76, Java 25. Demoted to manual start, not retired --
