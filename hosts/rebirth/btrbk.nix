@@ -1,18 +1,19 @@
-# btrbk receive target for exodus's off-box snapshot replication -- the `btrfs send -p`
-# half of exodus's btrfs plan (see hosts/exodus/btrbk.nix). exodus pushes each snapshot
+# btrbk receive target for retreat's off-box snapshot replication -- the `btrfs send -p`
+# half of retreat's btrfs plan (see hosts/retreat/btrbk.nix). retreat pushes each snapshot
 # here over SSH right after taking it; this host runs no timeline of its own, it only
 # authorizes the receive.
 #
 # services.btrbk.sshAccess does all the privileged wiring: it creates the dedicated
-# `btrbk` system user, pins exodus's public key to ssh_filter_btrbk.sh as a forced
+# `btrbk` system user, pins retreat's public key to ssh_filter_btrbk.sh as a forced
 # command (btrfs-receive ops only, never an interactive shell), and adds the NOPASSWD
 # sudo rule that lets that otherwise-unprivileged user run `btrfs receive`. PermitRootLogin
 # stays "no" -- the key logs in as `btrbk`, not root. The only sshd concession is admitting
 # that account past the shared AllowUsers allowlist, via publicNixos.ssh.extraAllowUsers.
 #
-# Received subvolumes land under /var/lib/btrbk/exodus, which is on the root btrfs pool so
+# Received subvolumes land under /var/lib/btrbk/exodus (the sender's name before it moved
+# to new hardware as `retreat`; kept so the incremental chain survives), on the root btrfs pool so
 # `btrfs receive` works. Retention on this copy is driven from the *source*
-# (target_preserve in hosts/exodus/btrbk.nix), since exodus owns the whole transaction.
+# (target_preserve in hosts/retreat/btrbk.nix), since retreat owns the whole transaction.
 _:
 
 {
@@ -34,7 +35,7 @@ _:
     }
   ];
 
-  # The directory exodus receives into: just needs to exist on a btrfs filesystem and be
+  # The directory retreat receives into: just needs to exist on a btrfs filesystem and be
   # owned by the btrbk user; `btrfs receive` creates the per-subvolume children under it.
   systemd.tmpfiles.rules = [
     "d /var/lib/btrbk/exodus 0750 btrbk btrbk -"

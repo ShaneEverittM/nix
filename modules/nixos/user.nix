@@ -29,7 +29,7 @@ in
   };
 
   # Shared home layer: every host gets the git module and the personal identity;
-  # hosts stack their own bundles (exodus: core + linux + desktop) and host-specific
+  # hosts stack their own bundles (retreat: core + linux + desktop) and host-specific
   # publicHome.* values on top. Importing git.nix here dedupes against hosts that
   # also pull it in via the core bundle — the module system imports a path once.
   home-manager.useGlobalPkgs = true;
@@ -42,7 +42,7 @@ in
     publicHome.git.userName = identity.userName;
     publicHome.git.userEmail = identity.userEmail;
     # Commit signing via the 1Password SSH key. How the signature is produced is
-    # per-host (exodus routes through the 1Password GUI's op-ssh-sign; rebirth signs
+    # per-host (retreat routes through the 1Password GUI's op-ssh-sign; rebirth signs
     # via ssh-keygen + the forwarded agent).
     publicHome.git.signingKey = identity.sshPublicKey;
   };

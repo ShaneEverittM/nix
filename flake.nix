@@ -25,10 +25,10 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
-      # Bare-metal KDE desktop — `nixos-rebuild switch --flake .#exodus` (or `nh os
+      # Bare-metal KDE desktop — `nixos-rebuild switch --flake .#retreat` (or `nh os
       # switch`). Formerly a standalone home-manager config on CachyOS; now full NixOS
-      # with home-manager folded in (see hosts/exodus/default.nix).
-      nixosConfigurations.exodus = import ./hosts/exodus/default.nix {
+      # with home-manager folded in (see hosts/retreat/default.nix).
+      nixosConfigurations.retreat = import ./hosts/retreat/default.nix {
         inherit inputs;
         system = "x86_64-linux";
       };

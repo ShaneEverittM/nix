@@ -16,7 +16,7 @@ let
   # The stand-ins write their transcripts here and the test reads them back. Shared with
   # the module via paths.nix, so the test cannot drift from the serverDirs the units
   # actually use.
-  dirs = import ../hosts/exodus/minecraft/paths.nix;
+  dirs = import ../hosts/retreat/minecraft/paths.nix;
 in
 pkgs.testers.runNixOSTest {
   name = "minecraft-console";
@@ -24,11 +24,11 @@ pkgs.testers.runNixOSTest {
   nodes.machine =
     { ... }:
     {
-      imports = [ ../hosts/exodus/minecraft ];
+      imports = [ ../hosts/retreat/minecraft ];
 
       # Pin the autoStart split the script asserts on, independent of what the host
       # currently runs. The pack list is imported for its paths and unit wiring, but
-      # which pack boots on exodus is an operational choice (both are off while the box
+      # which pack boots on retreat is an operational choice (both are off while the box
       # is between homes) -- the test is about the plumbing holding for *an* autoStart
       # pack and *a* dormant one, so it owns those inputs.
       publicMinecraft.servers = {
@@ -49,7 +49,7 @@ pkgs.testers.runNixOSTest {
       # rules (part of what's under test); the tree *above* them is the host's job, and it
       # has to be shane-owned the whole way down -- systemd-tmpfiles refuses an "unsafe
       # path transition" from a user-owned directory into a root-owned one and bails on the
-      # whole run. On exodus these already exist; here they don't, and letting tmpfiles
+      # whole run. On retreat these already exist; here they don't, and letting tmpfiles
       # auto-create them as root is exactly the failure that guard exists to catch.
       systemd.tmpfiles.rules = [
         "d /home/shane 0700 shane users - -"
@@ -100,7 +100,7 @@ pkgs.testers.runNixOSTest {
 
     # craftoria does not (also pinned): autoStart = false means no wantedBy on the
     # service, and the socket has none of its own either, so the whole pair stays
-    # dormant. This is what keeps a 14 GiB host from booting two modded heaps.
+    # dormant. This is what keeps the host from booting two modded heaps at once.
     machine.fail("systemctl is-active craftoria.service")
     machine.fail("systemctl is-active craftoria.socket")
 
