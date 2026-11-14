@@ -23,6 +23,8 @@
     ./beszel.nix
     # Sure personal-finance app (upstream containers) exposed over Tailscale.
     ./sure.nix
+    # Sunshine remote desktop (Moonlight clients), LAN + tailnet, headless-capable.
+    ./sunshine.nix
   ];
 
   programs._1password.enable = true;

@@ -59,6 +59,7 @@ It is also designed to be consumed by private consumers, like at work
 | `hosts/retreat/{btrbk,swap,beszel,cider}.nix`  | retreat services: snapshots, swap tiers, metrics, Cider launcher.                    |
 | `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.           |
 | `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).    |
+| `hosts/retreat/sunshine.nix`                   | Sunshine remote desktop (Moonlight): on-demand Plasma session + virtual 4K display.  |
 | `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                  |
 | `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch).                                            |
 | `tests/minecraft-console.nix`                  | NixOS VM test for the Minecraft console/sandbox plumbing (both packs).               |
@@ -342,6 +343,20 @@ is opened in the firewall. There is no manual secret step: a oneshot generates
 is its own subvolume in the btrbk timeline and so is replicated to rebirth. The first
 account registered becomes the admin, so create it straight after the first switch.
 Backup, restore and upgrade commands are in the module header.
+
+**Remote desktop (Sunshine).** `hosts/retreat/sunshine.nix` runs
+[Sunshine](https://github.com/LizardByte/Sunshine) for
+[Moonlight](https://moonlight-stream.org) clients, VAAPI-encoded on the iGPU. The box is
+headless, so nothing runs until asked: `ssh retreat systemctl start remote-desktop` logs
+the account into a Plasma session on its own VT (a real logind session, no auto-login),
+Sunshine starts with it, and `systemctl stop remote-desktop` ends both. The session
+opens on the lock screen. The "monitor" is a DisplayPort connector forced on with a
+generated 3840x2160@60 EDID -- 60 Hz is the ceiling for a forced connector; a hardware
+dummy plug lifts it. Streaming ports are open on the wired LAN interface and the
+tailnet, so Moonlight finds `retreat.local` at home and takes the tailnet name when
+away; the admin web UI (pairing PINs) is tailnet-only, at
+`https://<tailnet name>:47990`. First run: open that page, create its login, then pair
+by typing Moonlight's PIN into the PIN tab.
 
 **GPU.** `retreat` is a Minisforum MS-A2: one Radeon iGPU on the in-kernel `amdgpu`
 driver drives every output, so `hosts/retreat/configuration.nix` sets no `videoDrivers`
