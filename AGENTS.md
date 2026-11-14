@@ -34,7 +34,7 @@ private hostnames, private registry URLs, or encrypted secret files.
 | `flake.nix`                                              | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env.                                    |
 | `hosts/macbook/default.nix`                              | Personal Mac standalone home-manager assembly. No nix-darwin.                                                                       |
 | `hosts/retreat/default.nix`                              | `retreat` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop).                                       |
-| `hosts/retreat/configuration.nix`                        | `retreat` system layer: KDE Plasma, PipeWire, crash handling; imports the minecraft/btrbk/swap/beszel siblings.                     |
+| `hosts/retreat/configuration.nix`                        | `retreat` system layer: KDE Plasma, PipeWire, crash handling; imports the minecraft/btrbk/swap/beszel/sure siblings.                |
 | `hosts/retreat/hardware-configuration.nix`               | `retreat` generated hardware scan (filesystems, kernel modules).                                                                    |
 | `hosts/rebirth/default.nix`                              | `rebirth` headless home-server assembly. Home layer: git (via base) + shell + shared CLI set.                                       |
 | `hosts/rebirth/configuration.nix`                        | `rebirth` system layer: Wi-Fi (wpa_supplicant), lid-switch.                                                                         |

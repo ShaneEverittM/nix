@@ -57,6 +57,8 @@ It is also designed to be consumed by private consumers, like at work
 | `hosts/retreat/configuration.nix`              | retreat system layer (KDE Plasma, PipeWire, crash handling).                         |
 | `hosts/retreat/minecraft/`                     | retreat Minecraft servers: one generic module (`service.nix`) + the packs it serves. |
 | `hosts/retreat/{btrbk,swap,beszel,cider}.nix`  | retreat services: snapshots, swap tiers, metrics, Cider launcher.                    |
+| `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.           |
+| `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).    |
 | `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                  |
 | `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch).                                            |
 | `tests/minecraft-console.nix`                  | NixOS VM test for the Minecraft console/sandbox plumbing (both packs).               |
@@ -193,10 +195,10 @@ current; bump it with `nix flake update nixpkgs-unstable`.)
 
 `hosts/retreat/configuration.nix` is the system layer (KDE Plasma 6 on Wayland,
 PipeWire, SDDM, crash handling, and — via sibling files — the
-Minecraft/btrbk/swap/beszel stack); the `shane` account, zsh login shell, sshd, btrfs
-tuning, and `allowUnfree` all come from the shared base. `generic-linux.nix` is **not**
-imported — its foreign-distro fixups (`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are things
-NixOS already handles natively.
+Minecraft/btrbk/swap/beszel/sure stack); the `shane` account, zsh login shell, sshd,
+btrfs tuning, and `allowUnfree` all come from the shared base. `generic-linux.nix` is
+**not** imported — its foreign-distro fixups (`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are
+things NixOS already handles natively.
 
 First-boot setup (not Nix-managed):
 
@@ -328,6 +330,18 @@ key just means regenerating and re-committing the public half:
    ```
 
    The first real run is a full baseline (`home` + both worlds); do it on the **LAN**.
+
+**Sure (personal finance).** `hosts/retreat/sure.nix` runs
+[Sure](https://github.com/we-promise/sure) from the upstream image as five podman
+containers (web, Sidekiq worker, Postgres, Redis, and upstream's own backup tool) -- the
+project's compose file transcribed to `virtualisation.oci-containers`, with the version
+pinned. It is reachable only over Tailscale, at `https://<tailnet name>:8443`; nothing
+is opened in the firewall. There is no manual secret step: a oneshot generates
+`/var/lib/sure/config/.env` on first start and never rewrites it. Nightly backup bundles
+(database dump, uploaded files and that `.env`) land in `/var/lib/sure/backups`, which
+is its own subvolume in the btrbk timeline and so is replicated to rebirth. The first
+account registered becomes the admin, so create it straight after the first switch.
+Backup, restore and upgrade commands are in the module header.
 
 **GPU.** `retreat` is a Minisforum MS-A2: one Radeon iGPU on the in-kernel `amdgpu`
 driver drives every output, so `hosts/retreat/configuration.nix` sets no `videoDrivers`
