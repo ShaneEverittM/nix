@@ -351,8 +351,8 @@ headless, so nothing runs until asked: `ssh retreat systemctl start remote-deskt
 the account into a Plasma session on its own VT (a real logind session, no auto-login),
 Sunshine starts with it, and `systemctl stop remote-desktop` ends both. The session
 opens on the lock screen. The "monitor" is a DisplayPort connector forced on with a
-generated 3840x2160@60 EDID -- 60 Hz is the ceiling for a forced connector; a hardware
-dummy plug lifts it. Streaming ports are open on the wired LAN interface and the
+generated 3840x2160@60 EDID (60 Hz because the iGPU encodes 4K at about 58 fps at best,
+not because of the display). Streaming ports are open on the wired LAN interface and the
 tailnet, so Moonlight finds `retreat.local` at home and takes the tailnet name when
 away; the admin web UI (pairing PINs) is tailnet-only, at
 `https://<tailnet name>:47990`. First run: open that page, create its login, then pair

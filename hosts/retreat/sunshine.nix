@@ -41,12 +41,9 @@ let
   # gets here first sets the password".
   webUI = basePort + 1;
 
-  # The connector that plays the phantom monitor. A DisplayPort one, because the
-  # generated EDID below is a bare base block: on HDMI that reads as a DVI-class sink
-  # capped at a 165 MHz pixel clock, which rules out 4K, while a forced DP connector
-  # gets an assumed 4-lane HBR2 link from amdgpu -- enough for 4K60. A real monitor
-  # plugged into this port is ignored in favour of that EDID, so physical screens go on
-  # HDMI or the other DP port.
+  # The connector that plays the phantom monitor: simply a port left free. A real
+  # monitor plugged into it is ignored in favour of the EDID below, so physical
+  # screens go on HDMI or the other DP port.
   virtualOutput = "DP-1";
 
   user = (import ../../lib/identity.nix).username;
@@ -227,10 +224,14 @@ in
   # With no monitor attached every connector reads "disconnected" and KWin has no
   # output for Sunshine to capture. Force one on. amdgpu refuses to force a connector
   # without an EDID to build its emulated sink from, and the kernel's built-in EDIDs
-  # were removed in 6.10, so generate one: 3840x2160@60, CVT reduced blanking (533.25
-  # MHz, inside the forced link's budget -- 4K120 is not). To stream at another
-  # resolution, change the modeline -- or drop this block and use a hardware dummy
-  # plug, which does the same job from outside the kernel.
+  # were removed in 6.10, so generate one: 3840x2160@60, CVT reduced blanking.
+  #
+  # 60 Hz is the encoder's limit, not the display's. A forced connector will take
+  # 4K120 (tried: it needs the EDID's input flagged digital and the mode in a DisplayID
+  # block with reduced-blanking timing, past the base block's 655 MHz ceiling), but this
+  # iGPU spends ~17 ms capturing and encoding each 4K frame, so the stream tops out
+  # near 58 fps whatever the display does. To stream at another resolution, change the
+  # modeline.
   hardware.display = {
     edid.modelines.headless4k = "533.25  3840 3888 3920 4000  2160 2163 2168 2222  +hsync -vsync";
     outputs.${virtualOutput} = {
