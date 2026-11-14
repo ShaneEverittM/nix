@@ -10,8 +10,7 @@
 # stays "no" -- the key logs in as `btrbk`, not root. The only sshd concession is admitting
 # that account past the shared AllowUsers allowlist, via publicNixos.ssh.extraAllowUsers.
 #
-# Received subvolumes land under /var/lib/btrbk/exodus (the sender's name before it moved
-# to new hardware as `retreat`; kept so the incremental chain survives), on the root btrfs pool so
+# Received subvolumes land under /var/lib/btrbk/retreat, which is on the root btrfs pool so
 # `btrfs receive` works. Retention on this copy is driven from the *source*
 # (target_preserve in hosts/retreat/btrbk.nix), since retreat owns the whole transaction.
 _:
@@ -22,7 +21,7 @@ _:
 
   services.btrbk.sshAccess = [
     {
-      key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB1MUFXY42Zfq2tbL5Z81rkEJRq/YKxUBBf6TrYag5Hh btrbk exodus->rebirth";
+      key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB1MUFXY42Zfq2tbL5Z81rkEJRq/YKxUBBf6TrYag5Hh btrbk retreat->rebirth";
       # Receiver roles only: accept an incoming stream (receive), be addressable as a
       # target (target/info), and let the source-driven retention prune old backups here
       # (delete). No send/snapshot -- this host never originates a backup.
@@ -38,6 +37,6 @@ _:
   # The directory retreat receives into: just needs to exist on a btrfs filesystem and be
   # owned by the btrbk user; `btrfs receive` creates the per-subvolume children under it.
   systemd.tmpfiles.rules = [
-    "d /var/lib/btrbk/exodus 0750 btrbk btrbk -"
+    "d /var/lib/btrbk/retreat 0750 btrbk btrbk -"
   ];
 }

@@ -94,9 +94,7 @@
         # All subvolumes in this volume (home + every world) replicate here. btrbk's
         # config serializer emits this before the subvolume blocks, so it binds to the
         # volume, not the last subvolume.
-        # "exodus" is this install's former hostname; the path is kept so the existing
-        # received snapshots stay the incremental parents (renaming forces a full resend).
-        target = "ssh://rebirth/var/lib/btrbk/exodus";
+        target = "ssh://rebirth/var/lib/btrbk/retreat";
         # The world paths come off the module rather than being restated here: btrbk needs
         # the volume-relative form, and `worldSubvolume` is the read-only option in
         # ./minecraft/service.nix that derives it from the same serverDir the unit runs in,
