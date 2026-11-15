@@ -221,6 +221,19 @@ in
     LockOnStart=true
   '';
 
+  # A Plasma session brings PowerDevil with it, whose stock AC profile suspends the
+  # machine after 15 idle minutes -- and "idle" means no input in the session, so a
+  # remote-desktop session left running after Moonlight disconnects takes the whole box
+  # (Minecraft, Sure, SSH) down with it. Without a session nothing ever asks for sleep,
+  # so turning PowerDevil's auto-suspend off makes that true with one as well. Same
+  # system KConfig layer as above: console logins get it too, a user-level powerdevilrc
+  # can override it, and suspending by hand still works. Only the AC profile is set:
+  # this box has no battery, so the other two never apply.
+  environment.etc."xdg/powerdevilrc".text = ''
+    [AC][SuspendAndShutdown]
+    AutoSuspendAction=0
+  '';
+
   # With no monitor attached every connector reads "disconnected" and KWin has no
   # output for Sunshine to capture. Force one on. amdgpu refuses to force a connector
   # without an EDID to build its emulated sink from, and the kernel's built-in EDIDs
