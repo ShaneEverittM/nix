@@ -17,8 +17,14 @@
     ./btrbk.nix
     # Disk swapfile: the low-priority overflow tier layered under zram.
     ./swap.nix
+    # Declarative `tailscale serve` proxies (the option beszel + sure expose themselves with).
+    ./tailscale-serve.nix
     # Beszel metrics dashboard (hub + agent) exposed over Tailscale.
     ./beszel.nix
+    # Sure personal-finance app (upstream containers) exposed over Tailscale.
+    ./sure.nix
+    # Sunshine remote desktop (Moonlight clients), LAN + tailnet, headless-capable.
+    ./sunshine.nix
   ];
 
   programs._1password.enable = true;
