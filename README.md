@@ -458,6 +458,11 @@ rather than conditionals in the shell config. `modules/home/onepassword.nix` own
 rebirth runs no 1Password app: it has no secrets of its own, and signing/auth work
 through the SSH agent forwarded from whichever workstation is connected.
 
+The same applies to a workstation reached over SSH: its own 1Password app can't be
+unlocked from a remote session, so `modules/home/git.nix` wraps the signer and falls
+back to `ssh-keygen` + the forwarded agent whenever `SSH_CONNECTION` is set and
+`SSH_AUTH_SOCK` is a live socket (an `ssh -A` session, or a JetBrains remote backend).
+
 ## SSH client config
 
 `modules/home/ssh.nix` owns `~/.ssh/config`, so home-manager writes the whole file and
