@@ -397,13 +397,10 @@ in
     '';
 
     # ---- host end of each tap --------------------------------------------------
-    # NetworkManager owns this host's real interfaces and must leave the taps alone;
-    # systemd-networkd runs alongside it for these only (it touches nothing it has no
-    # .network file for), which is how microvm.nix expects taps to be addressed.
-    networking.networkmanager.unmanaged = [ "interface-name:vm-gs*" ];
+    # Addressed by systemd-networkd, which is how microvm.nix expects taps to be handled.
+    # The host's own uplink is networkd too (./configuration.nix); these links opt out
+    # of its definition of "online" below, since a stopped server has no tap at all.
     systemd.network.enable = true;
-    # networkd is not this host's notion of "online" -- NetworkManager is.
-    systemd.network.wait-online.enable = false;
     systemd.network.networks = lib.listToAttrs (
       map (
         slot:

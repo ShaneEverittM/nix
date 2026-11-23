@@ -31,12 +31,37 @@ _: {
   programs._1password.enable = true;
 
   networking.hostName = "retreat";
-  networking.networkmanager.enable = true;
 
-  # modules/nixos/user.nix owns the shane account. NetworkManager is this host's network
-  # stack (rebirth uses wpa_supplicant), so the group that lets the account drive
-  # `nmcli` lives here rather than in the shared user.
-  users.users."shane".extraGroups = [ "networkmanager" ];
+  # Wired uplink on systemd-networkd. NetworkManager did this while the box was a
+  # desktop; headless, all it did was run DHCP on one port, and networkd is already here
+  # for the game-server taps (./gameservers.nix) -- so this makes it the only stack, and
+  # the network config something that changes with a rebuild rather than with `nmcli`.
+  networking.useNetworkd = true;
+  # No implicit per-interface DHCP: the one .network below is the whole uplink policy.
+  networking.useDHCP = false;
+  systemd.network.networks."20-wired" = {
+    # Every physical port, by the predictable-name prefix, rather than the one in use by
+    # name: on a box with no screen, moving the cable to another port (there are four,
+    # two of them SFP+) must not be how it falls off the network. `en*` is deliberately
+    # narrower than Type=ether, which would also catch the guest taps and podman's veths.
+    matchConfig.Name = "en*";
+    networkConfig = {
+      DHCP = "yes";
+      IPv6AcceptRA = true;
+    };
+    # Identify to the DHCP server by MAC, as NetworkManager did (its client-id was
+    # 01:<mac>). networkd's default is a DUID, which the router would treat as a new
+    # client and could hand a different address -- and the router's port forwards for
+    # the game servers point at this host's address.
+    dhcpV4Config.ClientIdentifier = "mac";
+    linkConfig.RequiredForOnline = "routable";
+  };
+  # "Online" is ANY one port being routable. Every port asks for routable above, since
+  # it cannot be known which one has the cable; without --any the wait would then need
+  # all four and time out on the unplugged ones. The guest taps opt out entirely
+  # (RequiredForOnline=no in ./gameservers.nix). btrbk's push to rebirth, among others,
+  # is ordered on network-online.target, so this has to mean "has an address".
+  systemd.network.wait-online.anyInterface = true;
 
   # Memory-pressure resilience, tuned on this install's previous hardware (`exodus`,
   # 14 GiB) and carried over unchanged to this 32 GB box -- the headroom is far larger

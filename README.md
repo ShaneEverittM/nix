@@ -198,10 +198,10 @@ Unlike `rebirth` it keeps the full workstation home layer (core bundle + `linux.
 git, shell, rust, bun, java, the shared CLI sets) plus `claude-code`, because
 development still happens here — just remotely. `desktop.nix` is not imported.
 
-`hosts/retreat/configuration.nix` is the system layer (NetworkManager, the 1Password
-CLI, memory tuning, coredump bounds, and — via sibling files — the
-Minecraft/btrbk/swap/beszel/sure/enshrouded stack); the `shane` account, zsh login
-shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared base.
+`hosts/retreat/configuration.nix` is the system layer (the wired uplink on
+systemd-networkd, the 1Password CLI, memory tuning, coredump bounds, and — via sibling
+files — the Minecraft/btrbk/swap/beszel/sure/enshrouded stack); the `shane` account, zsh
+login shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared base.
 `generic-linux.nix` is **not** imported — its foreign-distro fixups (`XDG_DATA_DIRS`,
 `LOCALE_ARCHIVE`) are things NixOS already handles natively.
 
