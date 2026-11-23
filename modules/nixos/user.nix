@@ -29,7 +29,7 @@ in
   };
 
   # Shared home layer: every host gets the git module and the personal identity;
-  # hosts stack their own bundles (retreat: core + linux + desktop) and host-specific
+  # hosts stack their own bundles (retreat: core + linux) and host-specific
   # publicHome.* values on top. Importing git.nix here dedupes against hosts that
   # also pull it in via the core bundle — the module system imports a path once.
   home-manager.useGlobalPkgs = true;

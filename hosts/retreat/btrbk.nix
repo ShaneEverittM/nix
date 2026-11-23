@@ -19,7 +19,7 @@
 # nothing matches that name any more. Delete them by hand (`btrfs subvolume delete
 # /.snapshots/world.*`) once the new timeline has enough depth to be worth keeping instead.
 #
-# ./minecraft adds ExecStartPre/ExecStopPost to the btrbk-local unit this generates, one
+# ./minecraft/host.nix adds ExecStartPre/ExecStopPost to the btrbk-local unit this generates, one
 # freeze/thaw pair per server, to quiesce them (save-off + save-all flush) around the run --
 # otherwise the world snapshots are only crash-consistent. Look there before debugging a
 # btrbk-local failure, and note that it runs for the manual `systemctl start btrbk-local`
@@ -97,7 +97,7 @@
         target = "ssh://rebirth/var/lib/btrbk/retreat";
         # The world paths come off the module rather than being restated here: btrbk needs
         # the volume-relative form, and `worldSubvolume` is the read-only option in
-        # ./minecraft/service.nix that derives it from the same serverDir the unit runs in,
+        # ./minecraft/options.nix that derives it from the same serverDir the guest runs in,
         # so the two cannot drift. The module's tmpfiles rules also guarantee each of these
         # exists before the first run -- btrbk fails the *whole* run, home included, on a
         # subvolume that isn't there.

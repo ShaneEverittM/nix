@@ -1,15 +1,19 @@
-# Boots the real minecraft module in a VM and smoke-tests the console *plumbing* for both
-# packs: each console FIFO socket comes up under the system manager, a command written to
-# a FIFO reaches that server's stdin, the two units are genuinely independent, the
-# autoStart split holds, and the sandbox doesn't kill the process.
+# Boots the guest half of the minecraft module (hosts/retreat/minecraft/service.nix) in a
+# VM and smoke-tests the plumbing a pack's microVM depends on: each console FIFO socket
+# comes up under the system manager, a command written to a FIFO reaches that server's
+# stdin, two units are genuinely independent, the sandbox doesn't kill the process, and
+# the snapshot listener answers the host's freeze/thaw requests and nobody else's.
 #
-# What it does NOT test: the actual NeoForge servers. Those need multi-GB, non-free,
-# un-committable modpacks and an accepted EULA (the module's preflight fails without them),
-# so we can't run them in CI. We stand in a tiny reader for ExecStart that preserves the
-# one thing that's ours to get wrong -- the StandardInput=socket wiring and the systemd
-# hardening around it -- and drop the preflight. Everything else (the socket units, FIFO
-# paths, SocketMode/SocketUser, world subvolume creation, sandboxing) is the real module
-# under test.
+# What it does NOT test:
+#   - The actual NeoForge servers. Those need multi-GB, non-free, un-committable modpacks
+#     and an accepted EULA (the module's preflight fails without them), so we can't run
+#     them in CI. We stand in a tiny reader for ExecStart that preserves the one thing
+#     that's ours to get wrong -- the StandardInput=socket wiring and the systemd
+#     hardening around it -- and drop the preflight.
+#   - The VM boundary itself (microvm, tap, virtiofs, the host firewall, `gameserver`).
+#     On retreat each pack is the only server in its guest; here both share one test
+#     machine, which the module supports and which is what lets one node cover the
+#     independence checks. The host layer is covered by the retreat toplevel build only.
 { pkgs }:
 let
   inherit (pkgs) lib;
@@ -17,6 +21,7 @@ let
   # the module via paths.nix, so the test cannot drift from the serverDirs the units
   # actually use.
   dirs = import ../hosts/retreat/minecraft/paths.nix;
+  snapshotPort = 25590;
 in
 pkgs.testers.runNixOSTest {
   name = "minecraft-console";
@@ -24,38 +29,38 @@ pkgs.testers.runNixOSTest {
   nodes.machine =
     { ... }:
     {
-      imports = [ ../hosts/retreat/minecraft ];
+      imports = [ ../hosts/retreat/minecraft/service.nix ];
 
-      # Pin the autoStart split the script asserts on, independent of what the host
-      # currently runs. The pack list is imported for its paths and unit wiring, but
-      # which pack boots on retreat is an operational choice (both were off while the box
-      # was between homes) -- the test is about the plumbing holding for *an* autoStart
-      # pack and *a* dormant one, so it owns those inputs.
-      publicMinecraft.servers = {
-        atm10.autoStart = lib.mkForce true;
-        craftoria.autoStart = lib.mkForce false;
+      publicMinecraft = {
+        servers = lib.mapAttrs (name: dir: {
+          description = "stand-in for ${name}";
+          serverDir = dir;
+          jre = pkgs.jdk21_headless;
+          memory = 1024;
+        }) dirs;
+
+        # Admit loopback only, standing in for "the host's end of the tap": the test
+        # asserts both that this source gets an answer and that another one does not.
+        snapshotControl = {
+          enable = true;
+          port = snapshotPort;
+          allowFrom = "127.0.0.1";
+        };
       };
 
-      # The module runs the services as User=shane and the sockets as SocketUser=shane,
-      # but the shane account itself is declared in modules/nixos/user.nix, which this
-      # test doesn't import -- declare it here so both the units' user and the FIFO
-      # owners exist.
-      users.users.shane = {
-        isNormalUser = true;
-        uid = 1000;
-      };
-
-      # The serverDirs and their world subvolumes are created by the module's own tmpfiles
-      # rules (part of what's under test); the tree *above* them is the host's job, and it
-      # has to be shane-owned the whole way down -- systemd-tmpfiles refuses an "unsafe
-      # path transition" from a user-owned directory into a root-owned one and bails on the
-      # whole run. On retreat these already exist; here they don't, and letting tmpfiles
-      # auto-create them as root is exactly the failure that guard exists to catch.
+      # On retreat the pack trees are host directories shared into the guest, created by
+      # the host half (minecraft/host.nix). There is no host here, so make them.
       systemd.tmpfiles.rules = [
-        "d /home/shane 0700 shane users - -"
-        "d /home/shane/Servers 0755 shane users - -"
-        "d /home/shane/Servers/minecraft 0755 shane users - -"
-      ];
+        "d /var/lib/minecraft 0755 root root - -"
+      ]
+      ++ lib.concatLists (
+        lib.mapAttrsToList (_: dir: [
+          "d ${dir} 0750 minecraft minecraft - -"
+          "d ${dir}/world 0750 minecraft minecraft - -"
+        ]) dirs
+      );
+
+      environment.systemPackages = [ pkgs.socat ];
 
       # Swap each pack's launcher (needs the modpack) for a stand-in that keeps the exact
       # console contract: read line-delimited commands from stdin (the FIFO, via
@@ -85,24 +90,16 @@ pkgs.testers.runNixOSTest {
     start_all()
     machine.wait_for_unit("multi-user.target")
 
-    # The module creates each pack's tree ahead of the unit: the server dir plus the world
-    # as its own (would-be NOCOW subvolume) directory, user-owned. On the VM's non-btrfs
-    # root the `v` line degrades to a plain directory, which is the point of using `v`.
-    machine.succeed("test -d ${dirs.atm10}/world")
-    machine.succeed("test -d ${dirs.craftoria}/world")
-    machine.succeed("[ \"$(stat -c %U ${dirs.atm10}/world)\" = shane ]")
-
-    # atm10 carries autoStart (pinned above), so it and its FIFO socket come up on their
-    # own (%t = /run for a system unit). No user manager, no linger.
-    machine.wait_until_succeeds("systemctl is-active atm10.socket")
-    machine.wait_for_file("/run/atm10.stdin")
-    machine.wait_until_succeeds("systemctl is-active atm10.service")
-
-    # craftoria does not (also pinned): autoStart = false means no wantedBy on the
-    # service, and the socket has none of its own either, so the whole pair stays
-    # dormant. This is what keeps the host from booting two modded heaps at once.
-    machine.fail("systemctl is-active craftoria.service")
-    machine.fail("systemctl is-active craftoria.socket")
+    # Inside a guest every declared server starts with the machine -- whether a pack is
+    # up is decided by whether the host starts its VM, not by anything in here. Each
+    # comes up with its FIFO socket (%t = /run for a system unit), as the dedicated
+    # account.
+    for name in ["atm10", "craftoria"]:
+        machine.wait_until_succeeds(f"systemctl is-active {name}.socket")
+        machine.wait_for_file(f"/run/{name}.stdin")
+        machine.wait_until_succeeds(f"systemctl is-active {name}.service")
+    machine.succeed("[ \"$(systemctl show -p User --value atm10.service)\" = minecraft ]")
+    machine.succeed("[ \"$(id -u minecraft)\" = 25565 ]")
 
     # A command written to the FIFO reaches that server's stdin (the whole point of the
     # StandardInput=socket wiring: a writer closing must not EOF the server).
@@ -114,28 +111,51 @@ pkgs.testers.runNixOSTest {
     machine.succeed("echo 'say hi' > /run/atm10.stdin")
     machine.wait_until_succeeds("grep -q 'got: say hi' ${dirs.atm10}/console.log")
 
-    # The RCON wrapper refuses to dial while its own unit is down. That guard is what makes
-    # sharing port 25575 between packs safe: with atm10 up and craftoria stopped, something
-    # *is* listening on 25575, so a console that only checked the socket would happily save
-    # the wrong world and report success.
-    craftoria_refusal = machine.fail("craftoria-console list 2>&1")
-    assert "refusing to dial" in craftoria_refusal, craftoria_refusal
-
-    # Starting the dormant pack by hand brings up its own socket via Requires=, on its own
-    # FIFO path -- the two instances share no runtime state.
-    machine.succeed("systemctl start craftoria.service")
-    machine.wait_for_file("/run/craftoria.stdin")
+    # The other server has its own FIFO, and a write lands only there. A shared FIFO or
+    # a leak between the two sandboxes would show up as cross-talk here.
     machine.succeed("echo 'seed' > /run/craftoria.stdin")
     machine.wait_until_succeeds("grep -q 'got: seed' ${dirs.craftoria}/console.log")
-
-    # ...and it landed only there. A shared FIFO or a bind-mount leak between the two
-    # sandboxes would show up as cross-talk here.
     machine.fail("grep -q 'got: seed' ${dirs.atm10}/console.log")
     machine.fail("grep -q 'got: list' ${dirs.craftoria}/console.log")
 
-    # The hardening (seccomp allow/deny, ProtectHome=tmpfs, private keyring, PrivateUsers,
-    # PrivateIPC, ...) didn't SIGSYS/kill either process after it did real work.
+    # The sandbox is real: writable server dir, read-only everything else, and the
+    # hardening (seccomp allow/deny, private keyring, PrivateUsers, PrivateIPC, ...)
+    # didn't SIGSYS/kill either process after it did real work.
+    machine.succeed("[ \"$(stat -c %U ${dirs.atm10}/console.log)\" = minecraft ]")
     machine.succeed("systemctl is-active atm10.service")
     machine.succeed("systemctl is-active craftoria.service")
+
+    # The RCON wrapper refuses to dial while its own unit is down. That guard is what
+    # keeps the snapshot hooks from quiescing whatever else happens to hold the port.
+    machine.succeed("systemctl stop craftoria.service")
+    craftoria_refusal = machine.fail("craftoria-console list 2>&1")
+    assert "refusing to dial" in craftoria_refusal, craftoria_refusal
+
+    # ---- snapshot listener ----------------------------------------------------
+    # The host's btrbk run sends one word and reads the transcript back. The stand-ins
+    # have no RCON, so the hooks themselves can only report that save-off did not take
+    # (atm10, running) or that the world is at rest (craftoria, stopped) -- what is
+    # under test is the request path: the word arrives, every snapshotted server's hook
+    # runs, the transcript comes back, and the exchange ends with DONE.
+    request = "printf '%s\\n' {} | socat -t 120 - TCP:127.0.0.1:${toString snapshotPort},connect-timeout=5"
+    frozen = machine.succeed(request.format("freeze"))
+    assert "DONE freeze" in frozen, frozen
+    assert "craftoria not active" in frozen, frozen
+    assert "save-off" in frozen, frozen
+    thawed = machine.succeed(request.format("thaw"))
+    assert "DONE thaw" in thawed, thawed
+
+    # Anything else is refused without running a hook.
+    junk = machine.succeed(request.format("stop"))
+    assert "expected 'freeze' or 'thaw'" in junk, junk
+    assert "DONE" not in junk, junk
+
+    # ...and the firewall admits the configured source and nothing else to that port. A
+    # single node can't make a connection from a foreign address (anything it sends to
+    # itself arrives on lo, which the firewall always accepts), so assert the ruleset:
+    # exactly one rule mentions the port, and it is the source-restricted one.
+    rules = machine.succeed("iptables -S | grep -- '--dport ${toString snapshotPort}'").strip().splitlines()
+    assert len(rules) == 1, rules
+    assert "-s 127.0.0.1/32" in rules[0] and "nixos-fw-accept" in rules[0], rules
   '';
 }
