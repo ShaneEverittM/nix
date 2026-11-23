@@ -13,6 +13,20 @@
 
 let
   cfg = config.publicHome.git;
+
+  # sshSigningProgram is a password-manager signer that talks to *this* machine's
+  # app (op-ssh-sign → the local 1Password), which is not running or not unlockable
+  # when the session arrived over SSH. There the key lives in the agent forwarded
+  # from the connecting workstation instead, so sign with plain ssh-keygen against
+  # it. Same forwarded-vs-local test as ./onepassword.nix uses for SSH_AUTH_SOCK
+  # and IdentityAgent; it also covers a JetBrains remote backend, which hands git
+  # its own forwarded-agent socket in SSH_AUTH_SOCK.
+  sshSigner = pkgs.writeShellScript "git-ssh-sign" ''
+    if [ -n "''${SSH_CONNECTION:-}" ] && [ -S "''${SSH_AUTH_SOCK:-}" ]; then
+      exec ${pkgs.openssh}/bin/ssh-keygen "$@"
+    fi
+    exec ${lib.escapeShellArg cfg.sshSigningProgram} "$@"
+  '';
 in
 {
   options.publicHome.git = {
@@ -115,7 +129,7 @@ in
             );
           }
           // lib.optionalAttrs (cfg.sshSigningProgram != null) {
-            program = cfg.sshSigningProgram;
+            program = toString sshSigner;
           };
       };
     };

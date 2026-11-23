@@ -58,6 +58,7 @@ It is also designed to be consumed by private consumers, like at work
 | `hosts/retreat/minecraft/`                     | retreat Minecraft servers: one generic module (`service.nix`) + the packs it serves. |
 | `hosts/retreat/{btrbk,swap,beszel,cider}.nix`  | retreat services: snapshots, swap tiers, metrics, Cider launcher.                    |
 | `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.           |
+| `hosts/retreat/enshrouded.nix`                 | Enshrouded dedicated server: community Proton container under podman, UDP 15637.     |
 | `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).    |
 | `hosts/retreat/sunshine.nix`                   | Sunshine remote desktop (Moonlight): on-demand Plasma session + virtual 4K display.  |
 | `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                  |
@@ -196,10 +197,10 @@ current; bump it with `nix flake update nixpkgs-unstable`.)
 
 `hosts/retreat/configuration.nix` is the system layer (KDE Plasma 6 on Wayland,
 PipeWire, SDDM, crash handling, and — via sibling files — the
-Minecraft/btrbk/swap/beszel/sure stack); the `shane` account, zsh login shell, sshd,
-btrfs tuning, and `allowUnfree` all come from the shared base. `generic-linux.nix` is
-**not** imported — its foreign-distro fixups (`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are
-things NixOS already handles natively.
+Minecraft/btrbk/swap/beszel/sure/enshrouded stack); the `shane` account, zsh login
+shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared base.
+`generic-linux.nix` is **not** imported — its foreign-distro fixups (`XDG_DATA_DIRS`,
+`LOCALE_ARCHIVE`) are things NixOS already handles natively.
 
 First-boot setup (not Nix-managed):
 
@@ -344,6 +345,16 @@ is its own subvolume in the btrbk timeline and so is replicated to rebirth. The 
 account registered becomes the admin, so create it straight after the first switch.
 Backup, restore and upgrade commands are in the module header.
 
+**Enshrouded.** `hosts/retreat/enshrouded.nix` runs an
+[Enshrouded](https://enshrouded.com) dedicated server from the community
+[mornedhels/enshrouded-server](https://github.com/mornedhels/enshrouded-server) image
+(the Windows server under GE-Proton; Keen ships no Linux build), version-pinned, on
+UDP 15637. State lives in `/var/lib/enshrouded`: the game install, the world in its own
+`savegame` subvolume (in the btrbk timeline, so replicated to rebirth), and
+`secrets.env`, the per-role join passwords a oneshot generates on first start. The
+server updates the game itself while nobody is connected. Importing a client-hosted
+world and the day-to-day commands are in the module header.
+
 **Remote desktop (Sunshine).** `hosts/retreat/sunshine.nix` runs
 [Sunshine](https://github.com/LizardByte/Sunshine) for
 [Moonlight](https://moonlight-stream.org) clients, VAAPI-encoded on the iGPU. The box is
@@ -457,6 +468,11 @@ rather than conditionals in the shell config. `modules/home/onepassword.nix` own
 
 rebirth runs no 1Password app: it has no secrets of its own, and signing/auth work
 through the SSH agent forwarded from whichever workstation is connected.
+
+The same applies to a workstation reached over SSH: its own 1Password app can't be
+unlocked from a remote session, so `modules/home/git.nix` wraps the signer and falls
+back to `ssh-keygen` + the forwarded agent whenever `SSH_CONNECTION` is set and
+`SSH_AUTH_SOCK` is a live socket (an `ssh -A` session, or a JetBrains remote backend).
 
 ## SSH client config
 

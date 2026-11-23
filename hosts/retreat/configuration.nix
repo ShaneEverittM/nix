@@ -23,6 +23,8 @@
     ./beszel.nix
     # Sure personal-finance app (upstream containers) exposed over Tailscale.
     ./sure.nix
+    # Enshrouded dedicated server (community Proton container), UDP 15637.
+    ./enshrouded.nix
     # Sunshine remote desktop (Moonlight clients), LAN + tailnet, headless-capable.
     ./sunshine.nix
   ];
