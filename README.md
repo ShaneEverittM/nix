@@ -60,6 +60,7 @@ It is also designed to be consumed by private consumers, like at work
 | `hosts/retreat/{btrbk,swap,beszel}.nix`        | retreat services: snapshots, swap tiers, metrics.                                                    |
 | `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.                           |
 | `hosts/retreat/enshrouded.nix`                 | Enshrouded dedicated server: community Proton container under podman, in its own microVM, UDP 15637. |
+| `hosts/retreat/plex.nix`                       | Plex Media Server (native): LAN + tailnet, media in `/srv/media`, not internet-facing.               |
 | `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).                    |
 | `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                                  |
 | `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch).                                                            |
@@ -200,10 +201,10 @@ development still happens here — just remotely. `desktop.nix` is not imported.
 
 `hosts/retreat/configuration.nix` is the system layer (the wired uplink on
 systemd-networkd, the 1Password CLI, memory tuning, coredump bounds, and — via sibling
-files — the Minecraft/btrbk/swap/beszel/sure/enshrouded stack); the `shane` account, zsh
-login shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared base.
-`generic-linux.nix` is **not** imported — its foreign-distro fixups (`XDG_DATA_DIRS`,
-`LOCALE_ARCHIVE`) are things NixOS already handles natively.
+files — the Minecraft/btrbk/swap/beszel/sure/enshrouded/plex stack); the `shane`
+account, zsh login shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared
+base. `generic-linux.nix` is **not** imported — its foreign-distro fixups
+(`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are things NixOS already handles natively.
 
 First-boot setup (not Nix-managed):
 
@@ -378,6 +379,15 @@ is opened in the firewall. There is no manual secret step: a oneshot generates
 is its own subvolume in the btrbk timeline and so is replicated to rebirth. The first
 account registered becomes the admin, so create it straight after the first switch.
 Backup, restore and upgrade commands are in the module header.
+
+**Plex.** `hosts/retreat/plex.nix` runs Plex Media Server from nixpkgs, on the host. Its
+ports are open in the firewall so TVs and consoles on the LAN find it, and tailnet
+devices reach it at `http://retreat:32400/web`; nothing is forwarded on the router, and
+Plex's own Remote Access should stay off. Media goes in `/srv/media/{movies,tv}` (its
+own subvolume, owned by the login user, deliberately outside the btrbk timeline); the
+library database in `/var/lib/plex` is not backed up off-box either. A fresh server can
+only be claimed from the machine itself, so the first sign-in goes through
+`ssh -L 32400:localhost:32400 retreat` and `http://localhost:32400/web`.
 
 **Enshrouded.** `hosts/retreat/enshrouded.nix` runs an
 [Enshrouded](https://enshrouded.com) dedicated server from the community
