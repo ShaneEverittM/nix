@@ -223,6 +223,19 @@ pkgs.testers.runNixOSTest {
         assert not any(active(n) for n in ["alpha", "beta", "gamma", "delta"])
         assert not any(enabled(n) for n in ["alpha", "beta", "gamma", "delta"])
 
+        # Seeding is per server, so one that appears later still gets its default --
+        # but not over an operator's choice: alpha's slot is held by beta, so alpha
+        # stays off even though it declares autoStart.
+        machine.succeed(
+            "gameserver enable beta",
+            "rm /var/lib/gameservers/seeded/alpha /var/lib/gameservers/seeded/gamma",
+            "systemctl restart gameservers-autostart.service",
+        )
+        machine.wait_until_succeeds("systemctl is-active microvm@gamma.service")
+        assert enabled("gamma") and enabled("beta") and not enabled("alpha")
+        machine.succeed("test -e /var/lib/gameservers/seeded/alpha")
+        machine.succeed("gameserver disable beta", "gameserver disable gamma")
+
         machine.succeed("gameserver enable gamma")
         machine.shutdown()
         machine.start()

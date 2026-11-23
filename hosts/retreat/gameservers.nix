@@ -211,6 +211,34 @@ in
             '';
             type = lib.types.listOf lib.types.path;
           };
+          volumes = lib.mkOption {
+            default = [ ];
+            description = ''
+              Guest-private disks, for bulky state that must outlive a restart (a guest's
+              root is RAM) but that the host has no reason to see into or snapshot --
+              a container image store, say. Each is an image file under
+              /var/lib/microvms/<name>/, created on first start. Anything worth backing
+              up belongs in `shares` instead, on the host's filesystem.
+            '';
+            type = lib.types.listOf (
+              lib.types.submodule {
+                options = {
+                  image = lib.mkOption {
+                    type = lib.types.str;
+                    description = "Image file name, relative to the guest's state directory.";
+                  };
+                  mountPoint = lib.mkOption {
+                    type = lib.types.path;
+                    description = "Where the guest mounts it.";
+                  };
+                  size = lib.mkOption {
+                    type = lib.types.ints.positive;
+                    description = "Size in MiB when first created.";
+                  };
+                };
+              }
+            );
+          };
           autoStart = lib.mkOption {
             type = lib.types.bool;
             default = false;
@@ -242,6 +270,17 @@ in
           ) (lib.attrValues cfg.servers)
         ) (lib.attrValues cfg.servers);
         message = "publicGameServers: two servers forward the same port but are on different slots; put them on one slot.";
+      }
+      {
+        # Sharing a slot means "these are alternatives for one address". Two unrelated
+        # games landing on one slot by accident would quietly become mutually exclusive.
+        assertion = lib.all (
+          a:
+          lib.all (b: a.slot != b.slot || (a.forwardTCP == b.forwardTCP && a.forwardUDP == b.forwardUDP)) (
+            lib.attrValues cfg.servers
+          )
+        ) (lib.attrValues cfg.servers);
+        message = "publicGameServers: servers on the same slot must forward the same ports; give unrelated servers their own slot.";
       }
     ];
 
@@ -283,6 +322,11 @@ in
             mountPoint = path;
             proto = "virtiofs";
           }) srv.shares;
+          volumes = map (v: {
+            inherit (v) image mountPoint size;
+            autoCreate = true;
+            fsType = "ext4";
+          }) srv.volumes;
         };
 
         networking.hostName = name;
@@ -352,17 +396,41 @@ in
             config.systemd.package
           ];
           script = ''
-            # First activation only: turn the declared defaults into flags. After this
-            # the flags are the operator's, and a rebuild must not resurrect a server
-            # that was disabled by hand.
-            if [ ! -e ${stateDir}/.seeded ]; then
-              ${lib.concatStrings (
-                lib.mapAttrsToList (name: _: ''
-                  touch ${flagDir}/${name}
-                '') (lib.filterAttrs (_: srv: srv.autoStart) cfg.servers)
-              )}
-              touch ${stateDir}/.seeded
-            fi
+            # The first time each server is seen, and only then, turn its declared default
+            # into a flag. After that the flag is the operator's, and a rebuild must not
+            # resurrect a server that was disabled by hand. Tracked per server so that one
+            # added later still gets its default. A server whose slot already has an
+            # enabled occupant is not seeded over it: the operator's choice wins.
+            mkdir -p ${stateDir}/seeded
+            seed() {
+              name="$1" default="$2"
+              shift 2
+              if [ -e ${stateDir}/seeded/"$name" ]; then return 0; fi
+              if [ "$default" = 1 ]; then
+                for rival in "$@"; do
+                  if [ -e ${flagDir}/"$rival" ]; then default=0; fi
+                done
+              fi
+              if [ "$default" = 1 ]; then
+                touch ${flagDir}/"$name"
+              fi
+              touch ${stateDir}/seeded/"$name"
+            }
+            ${lib.concatStrings (
+              lib.mapAttrsToList (name: srv: ''
+                seed ${
+                  lib.escapeShellArgs (
+                    [
+                      name
+                      (if srv.autoStart then "1" else "0")
+                    ]
+                    ++ rivals name
+                  )
+                }
+              '') cfg.servers
+            )}
+            # The single marker from before seeding was per server.
+            rm -f ${stateDir}/.seeded
             for name in ${lib.escapeShellArgs names}; do
               if [ -e ${flagDir}/"$name" ]; then
                 systemctl start --no-block "microvm@$name.service"
