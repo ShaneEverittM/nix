@@ -129,6 +129,10 @@ in
       slot = slotOf srv;
       inherit (srv) memory vcpu autoStart;
       forwardTCP = [ srv.port ];
+      players = {
+        protocol = "minecraft";
+        inherit (srv) port;
+      };
       shares = [ srv.serverDir ];
       guest = {
         imports = [ ./service.nix ];

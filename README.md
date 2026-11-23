@@ -231,7 +231,7 @@ and nothing else. `hosts/retreat/gameservers.nix` is the game-agnostic layer:
   is a flag per server, changed without a rebuild:
 
   ```bash
-  gameserver list
+  gameserver list                # boot flag, state, and players online
   gameserver enable craftoria    # start now and at boot (takes over a shared slot)
   gameserver disable craftoria   # stop and stay off
   gameserver restart atm10       # also how a guest picks up a rebuilt system

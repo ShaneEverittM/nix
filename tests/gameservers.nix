@@ -46,6 +46,10 @@ pkgs.testers.runNixOSTest {
           slot = 1;
           memory = 256;
           forwardTCP = [ 25565 ];
+          players = {
+            protocol = "minecraft";
+            port = 25565;
+          };
           autoStart = true;
           guest = { };
         };
@@ -137,7 +141,14 @@ pkgs.testers.runNixOSTest {
         machine.wait_until_succeeds("systemctl is-active microvm@alpha.service")
         assert not active("beta")
         assert enabled("beta") and not enabled("alpha")
-        machine.succeed("su - ${operator} -c 'gameserver list'")
+        # The players column: stopped servers show "-"; a running one with a query
+        # configured that does not answer (the stand-in hypervisor never will) shows "?".
+        listing = machine.succeed("su - ${operator} -c 'gameserver list'")
+        rows = {line.split()[0]: line.split() for line in listing.splitlines()}
+        assert rows["SERVER"][-1] == "PLAYERS", listing
+        assert rows["alpha"][2:] == ["active", "?"], listing
+        assert rows["beta"][2:] == ["inactive", "-"], listing
+        assert rows["gamma"][2:] == ["active", "-"], listing
         machine.fail("su - ${operator} -c 'gameserver enable nosuch'")
 
     with subtest("that privilege covers the game servers and nothing else"):

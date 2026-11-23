@@ -84,6 +84,11 @@ let
     "224.0.0.0/4"
   ];
 
+  # `gameserver-players <protocol> <host> <port>` -> "online/max". Standard library only.
+  playersQuery = pkgs.writeShellScript "gameserver-players" ''
+    exec ${pkgs.python3}/bin/python3 ${./gameserver-players.py} "$@"
+  '';
+
   gameserver = pkgs.writeShellApplication {
     name = "gameserver";
     runtimeInputs = with pkgs; [
@@ -92,6 +97,20 @@ let
     ];
     text = ''
       names=(${lib.escapeShellArgs names})
+
+      player_query() {
+        case "$1" in
+          ${lib.concatStrings (
+            lib.mapAttrsToList (
+              name: srv:
+              lib.optionalString (srv.players != null) ''
+                ${name}) echo "${srv.players.protocol} ${guestAddr srv.slot} ${toString srv.players.port}" ;;
+              ''
+            ) cfg.servers
+          )}
+          *) ;;
+        esac
+      }
 
       rivals() {
         case "$1" in
@@ -105,7 +124,7 @@ let
 
       usage() {
         cat <<USAGE
-      usage: gameserver list
+      usage: gameserver list                     boot flag, state and players online
              gameserver enable|disable <name>    start now and at boot / stop and stay off
              gameserver start|stop|restart <name>  this boot only; does not change enable
              gameserver logs <name>              follow the guest's console (server log)
@@ -125,10 +144,20 @@ let
       cmd="''${1:-list}"
       case "$cmd" in
         list | status)
-          printf '%-14s %-9s %s\n' SERVER BOOT STATE
+          # PLAYERS asks each running server directly, the way a server browser would.
+          # "?" is a server that is up but not answering -- normal while it is still
+          # loading -- and "-" is one that is stopped (or has no query configured).
+          printf '%-14s %-9s %-11s %s\n' SERVER BOOT STATE PLAYERS
           for n in "''${names[@]}"; do
             if [ -e "${flagDir}/$n" ]; then boot=enabled; else boot=disabled; fi
-            printf '%-14s %-9s %s\n' "$n" "$boot" "$(systemctl is-active "microvm@$n.service" || true)"
+            state="$(systemctl is-active "microvm@$n.service" || true)"
+            players=-
+            query="$(player_query "$n")"
+            if [ "$state" = active ] && [ -n "$query" ]; then
+              # shellcheck disable=SC2086 # three words: protocol, address, port
+              players="$(timeout 5 ${playersQuery} $query 2>/dev/null || echo "?")"
+            fi
+            printf '%-14s %-9s %-11s %s\n' "$n" "$boot" "$state" "$players"
           done
           ;;
         enable)
@@ -234,6 +263,32 @@ in
                   size = lib.mkOption {
                     type = lib.types.ints.positive;
                     description = "Size in MiB when first created.";
+                  };
+                };
+              }
+            );
+          };
+          players = lib.mkOption {
+            default = null;
+            description = ''
+              How `gameserver list` asks this server how many players are on it, so
+              that "is anyone playing?" has an answer before a restart. Both protocols
+              are the public status query a server browser sends; the host makes it
+              straight to the guest's address.
+            '';
+            type = lib.types.nullOr (
+              lib.types.submodule {
+                options = {
+                  protocol = lib.mkOption {
+                    type = lib.types.enum [
+                      "minecraft"
+                      "steam"
+                    ];
+                    description = "`minecraft`: Server List Ping (TCP). `steam`: A2S_INFO (UDP).";
+                  };
+                  port = lib.mkOption {
+                    type = lib.types.port;
+                    description = "Port the server answers the query on, inside the guest.";
                   };
                 };
               }

@@ -115,6 +115,11 @@ in
     memory = 6144;
     vcpu = 6;
     forwardUDP = [ port ];
+    # The Steam query port is the game port on current builds (SERVER_QUERYPORT below).
+    players = {
+      protocol = "steam";
+      inherit port;
+    };
     shares = [ stateDir ];
     volumes = [
       {
