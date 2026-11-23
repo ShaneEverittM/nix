@@ -17,54 +17,56 @@ It is also designed to be consumed by private consumers, like at work
 
 ## Layout
 
-| Path                                           | Purpose                                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `flake.nix`                                    | inputs + outputs: hosts, home configs, packages, modules.                             |
-| `lib/packages.nix`                             | shared CLI package set (`pkgs -> [ derivations ]`), used everywhere.                  |
-| `lib/unstable-packages.nix`                    | shared CLI packages that move fast, used everywhere.                                  |
-| `lib/identity.nix`                             | single-sourced public identity: login name, name, email, SSH key.                     |
-| `lib/nixpkgs-config.nix`                       | narrow shared unfree predicate (standalone home configs).                             |
-| `lib/mk-pkgs.nix`                              | the one nixpkgs instantiation every consumer shares.                                  |
-| `lib/checks.nix`                               | CI gates: lint checks, downstream contract checks, host builds.                       |
-| `pyproject.toml`, `uv.lock`                    | project-local Python tooling for NixOS VM test scripts.                               |
-| `files/`                                       | public dotfiles; store or out-of-store per `dotfiles.mode`.                           |
-| `Brewfile`                                     | macOS casks/formulae base.                                                            |
-| `modules/home/`                                | home-manager modules (the universal sharing layer).                                   |
-| `modules/home/default.nix`                     | core bundle: common + git + onepassword + ssh + shell + rust + bun + java.            |
-| `modules/home/common.nix`                      | publicHome.\* options, packages, stateVersion, news.silent.                           |
-| `modules/home/git.nix`                         | option-driven git; identity via publicHome.git.\*.                                    |
-| `modules/home/shell.nix`                       | zsh + zoxide/direnv, eza/bat aliases, uv/mise, Warp auto-warpify.                     |
-| `modules/home/rust.nix`                        | rustup + cargo (sanitized cross-compile config).                                      |
-| `modules/home/bun.nix`                         | bun runtime + global @types/bun.                                                      |
-| `modules/home/java.nix`                        | LTS JDK + gradle, stable JAVA_HOME symlink for JetBrains.                             |
-| `modules/home/onepassword.nix`                 | SSH_AUTH_SOCK for the 1Password agent (per-platform path).                            |
-| `modules/home/ssh.nix`                         | owns `~/.ssh/config`: host aliases for this repo's machines + a local include.        |
-| `modules/home/linux.nix`                       | shared Linux layer.                                                                   |
-| `modules/home/generic-linux.nix`               | non-NixOS distro fixups: XDG dirs, locale, fontconfig.                                |
-| `modules/home/desktop.nix`                     | cross-platform GUI bundle: vscode + zed + warp + jetbrains.                           |
-| `modules/home/darwin.nix`                      | mac-only layer (imports desktop).                                                     |
-| `modules/home/{vscode,zed,warp,jetbrains}.nix` | GUI/terminal dotfiles (out-of-store symlinks), per-OS paths.                          |
-| `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + Linux).                                          |
-| `modules/nixos/default.nix`                    | shared NixOS base bundle (core + user + ssh + network + memory + btrfs).              |
-| `modules/nixos/core.nix`                       | nix settings, nixPath pin, boot, locale, git+neovim, nix-ld, nh.                      |
-| `modules/nixos/user.nix`                       | shane account (identity.nix), zsh login shell, home-manager fold-in.                  |
-| `modules/nixos/ssh.nix`                        | hardened key-only sshd + tailnet penalty exemption.                                   |
-| `modules/nixos/network.nix`                    | avahi mDNS + tailscale + systemd-resolved (split DNS).                                |
-| `modules/nixos/memory.nix`                     | zram + earlyoom baseline.                                                             |
-| `modules/nixos/btrfs.nix`                      | compression/scrub/trim for the hosts' identical btrfs layouts.                        |
-| `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                                     |
-| `hosts/retreat/default.nix`                    | nixosConfigurations.retreat (base bundle + home core/linux + claude-code).            |
-| `hosts/retreat/configuration.nix`              | retreat system layer (headless: networking, 1Password CLI, memory + coredump limits). |
-| `hosts/retreat/minecraft/`                     | retreat Minecraft servers: one generic module (`service.nix`) + the packs it serves.  |
-| `hosts/retreat/{btrbk,swap,beszel}.nix`        | retreat services: snapshots, swap tiers, metrics.                                     |
-| `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.            |
-| `hosts/retreat/enshrouded.nix`                 | Enshrouded dedicated server: community Proton container under podman, UDP 15637.      |
-| `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).     |
-| `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                   |
-| `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch).                                             |
-| `tests/minecraft-console.nix`                  | NixOS VM test for the Minecraft console/sandbox plumbing (both packs).                |
-| `tests/base-smoke.{nix,py}`                    | NixOS VM test booting the shared base: assembly + Python behavior assertions.         |
-| `.zed/settings.json`                           | project-level Zed nixd + format-on-save (Zed-over-SSH on rebirth).                    |
+| Path                                           | Purpose                                                                                            |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `flake.nix`                                    | inputs + outputs: hosts, home configs, packages, modules.                                          |
+| `lib/packages.nix`                             | shared CLI package set (`pkgs -> [ derivations ]`), used everywhere.                               |
+| `lib/unstable-packages.nix`                    | shared CLI packages that move fast, used everywhere.                                               |
+| `lib/identity.nix`                             | single-sourced public identity: login name, name, email, SSH key.                                  |
+| `lib/nixpkgs-config.nix`                       | narrow shared unfree predicate (standalone home configs).                                          |
+| `lib/mk-pkgs.nix`                              | the one nixpkgs instantiation every consumer shares.                                               |
+| `lib/checks.nix`                               | CI gates: lint checks, downstream contract checks, host builds.                                    |
+| `pyproject.toml`, `uv.lock`                    | project-local Python tooling for NixOS VM test scripts.                                            |
+| `files/`                                       | public dotfiles; store or out-of-store per `dotfiles.mode`.                                        |
+| `Brewfile`                                     | macOS casks/formulae base.                                                                         |
+| `modules/home/`                                | home-manager modules (the universal sharing layer).                                                |
+| `modules/home/default.nix`                     | core bundle: common + git + onepassword + ssh + shell + rust + bun + java.                         |
+| `modules/home/common.nix`                      | publicHome.\* options, packages, stateVersion, news.silent.                                        |
+| `modules/home/git.nix`                         | option-driven git; identity via publicHome.git.\*.                                                 |
+| `modules/home/shell.nix`                       | zsh + zoxide/direnv, eza/bat aliases, uv/mise, Warp auto-warpify.                                  |
+| `modules/home/rust.nix`                        | rustup + cargo (sanitized cross-compile config).                                                   |
+| `modules/home/bun.nix`                         | bun runtime + global @types/bun.                                                                   |
+| `modules/home/java.nix`                        | LTS JDK + gradle, stable JAVA_HOME symlink for JetBrains.                                          |
+| `modules/home/onepassword.nix`                 | SSH_AUTH_SOCK for the 1Password agent (per-platform path).                                         |
+| `modules/home/ssh.nix`                         | owns `~/.ssh/config`: host aliases for this repo's machines + a local include.                     |
+| `modules/home/linux.nix`                       | shared Linux layer.                                                                                |
+| `modules/home/generic-linux.nix`               | non-NixOS distro fixups: XDG dirs, locale, fontconfig.                                             |
+| `modules/home/desktop.nix`                     | cross-platform GUI bundle: vscode + zed + warp + jetbrains.                                        |
+| `modules/home/darwin.nix`                      | mac-only layer (imports desktop).                                                                  |
+| `modules/home/{vscode,zed,warp,jetbrains}.nix` | GUI/terminal dotfiles (out-of-store symlinks), per-OS paths.                                       |
+| `modules/home/warp-settings.nix`               | shared Warp settings schema (macOS + Linux).                                                       |
+| `modules/nixos/default.nix`                    | shared NixOS base bundle (core + user + ssh + network + memory + btrfs).                           |
+| `modules/nixos/core.nix`                       | nix settings, nixPath pin, boot, locale, git+neovim, nix-ld, nh.                                   |
+| `modules/nixos/user.nix`                       | shane account (identity.nix), zsh login shell, home-manager fold-in.                               |
+| `modules/nixos/ssh.nix`                        | hardened key-only sshd + tailnet penalty exemption.                                                |
+| `modules/nixos/network.nix`                    | avahi mDNS + tailscale + systemd-resolved (split DNS).                                             |
+| `modules/nixos/memory.nix`                     | zram + earlyoom baseline.                                                                          |
+| `modules/nixos/btrfs.nix`                      | compression/scrub/trim for the hosts' identical btrfs layouts.                                     |
+| `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                                                  |
+| `hosts/retreat/default.nix`                    | nixosConfigurations.retreat (base bundle + home core/linux + claude-code).                         |
+| `hosts/retreat/configuration.nix`              | retreat system layer (headless: networking, 1Password CLI, memory + coredump limits).              |
+| `hosts/retreat/minecraft/`                     | retreat Minecraft servers: packs, options, guest module (`service.nix`), host module (`host.nix`). |
+| `hosts/retreat/gameservers.nix`                | microVM layer for public game servers: isolation firewall, port forwards, `gameserver` command.    |
+| `hosts/retreat/{btrbk,swap,beszel}.nix`        | retreat services: snapshots, swap tiers, metrics.                                                  |
+| `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.                         |
+| `hosts/retreat/enshrouded.nix`                 | Enshrouded dedicated server: community Proton container under podman, UDP 15637.                   |
+| `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).                  |
+| `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                                |
+| `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch).                                                          |
+| `tests/minecraft-console.nix`                  | NixOS VM test for the Minecraft guest module: console/sandbox plumbing, snapshot listener.         |
+| `tests/gameservers.nix`                        | NixOS VM test for the game-server host layer: guest isolation firewall, `gameserver` state.        |
+| `tests/base-smoke.{nix,py}`                    | NixOS VM test booting the shared base: assembly + Python behavior assertions.                      |
+| `.zed/settings.json`                           | project-level Zed nixd + format-on-save (Zed-over-SSH on rebirth).                                 |
 
 Why this shape: home-manager is the one layer every host shares, so the `modules/home/*`
 are the real reuse atom. The two Linux hosts (retreat and rebirth) run NixOS and fold
@@ -212,30 +214,58 @@ First-boot setup (not Nix-managed):
    `modules/home/ssh.nix`), with git signing through plain `ssh-keygen`. From the local
    console there is no agent, so signed commits and pushes don't work there.
 
-**Minecraft servers.** `hosts/retreat/minecraft/` splits into a generic module
-(`service.nix`, which owns the systemd unit, console FIFO, RCON wrapper, readiness
-probe, sandbox, world subvolume, and btrbk quiescing) and `default.nix`, which declares
-the packs via `publicMinecraft.servers.<name>`. Today that's **atm10** (Java 21, starts
-at boot) and **craftoria** (Java 25, `autoStart = false`). Only one runs at a time — 14
-GiB on the old hardware wouldn't hold two modded heaps, and the failure mode is
-thrash-to-livelock rather than a clean OOM kill — so switching packs is
-`systemctl stop atm10 && systemctl start craftoria`.
+**Game servers run in microVMs.** The Minecraft servers are the only things on retreat
+that take traffic from the open internet, and a large modded pack is exactly the kind of
+software that gets exploited. A systemd sandbox or a container shares the host kernel,
+so each server instead gets its own guest kernel behind KVM
+([microvm.nix](https://github.com/microvm-nix/microvm.nix)), holding its game's files
+and nothing else. `hosts/retreat/gameservers.nix` is the game-agnostic layer:
 
-Both deliberately share **25565** (and 25575 for RCON), which is what enforces that:
-players keep one address whichever pack is up, and starting a second server without
-stopping the first dies at the bind in seconds instead of quietly succeeding and taking
-the box with it. The tradeoff is that "something answered on RCON" no longer identifies
-a pack, so `<name>-console` checks its own unit state before dialing — that guard is
-what keeps a shared port from becoming a `save-all` against the wrong world, and
-`tests/minecraft-console.nix` asserts it. Worlds are separate subvolumes regardless, so
-concurrent packs after the RAM upgrade are a port change plus `autoStart`, not a
-migration.
+- **Network.** Each server sits on a routed point-to-point tap (`10.77.<slot>.2`). The
+  host forwards the game's public port to it and gives it outbound internet; the
+  firewall refuses a guest everything else — the host itself, the LAN, the tailnet,
+  other guests. `tests/gameservers.nix` asserts that with a network namespace playing a
+  compromised guest.
+- **On and off is state, not config.** Every server is always declared; which ones run
+  is a flag per server, changed without a rebuild:
 
-Each server gets `<name>-console` on `PATH` for one-shot or interactive RCON, and
-`/run/<name>.stdin` as a write-only console FIFO. Pack installation, `eula.txt`,
-`user_jvm_args.txt`, and `server.properties` are out-of-store manual state; the unit's
-preflight fails fast and legibly when any of it is missing or when a pack's declared
-ports disagree with `server.properties`.
+  ```bash
+  gameserver list
+  gameserver enable craftoria    # start now and at boot (takes over a shared slot)
+  gameserver disable craftoria   # stop and stay off
+  gameserver restart atm10       # also how a guest picks up a rebuilt system
+  gameserver logs atm10          # the guest's console: the server log
+  ```
+
+  `autoStart` only seeds the flags on first activation. A rebuild never restarts a
+  running guest, so an unrelated `nh os switch` does not kick players.
+
+- **No way in.** A guest has no sshd, no password and no key. Its console is the host
+  unit's journal; its system is the host's `/nix/store`, shared read-only.
+
+**Minecraft servers.** `hosts/retreat/minecraft/` is four files: `default.nix` declares
+the packs via `publicMinecraft.servers.<name>`; `options.nix` holds the option
+declarations; `service.nix` is the **guest** half (the systemd unit, readiness probe,
+sandbox, and the snapshot hooks); `host.nix` is the **host** half (pack storage, world
+subvolumes, btrbk hooks, one guest per pack). Today that's **atm10** (Java 21, enabled
+by default) and **craftoria** (Java 25, disabled by default).
+
+Both deliberately share **25565**, which puts them on one network slot: starting either
+stops the other, and players keep one address whichever is up. Running both at once is a
+port change on one of them.
+
+Pack trees live in `/var/lib/minecraft/<pack>`, owned by a dedicated `minecraft` account
+(fixed UID 25565 on the host and in every guest) and shared into the pack's guest at the
+same path. They are deliberately not under a home directory: a share exposes everything
+beneath it. To work on a pack by hand, `sudo -u minecraft -s`. Pack installation,
+`eula.txt`, `user_jvm_args.txt`, and `server.properties` are out-of-store manual state;
+the unit's preflight fails fast and legibly when any of it is missing or when a pack's
+declared ports disagree with `server.properties`. A guest's RAM (`memory`) is a hard
+ceiling and must stay roughly 3 GiB above `-Xmx` in `user_jvm_args.txt`.
+
+RCON and the console FIFO still exist, but only inside the guest, where the readiness
+probe and the snapshot hooks use them; there is no operator console on the host. Run
+server commands in-game.
 
 **Filesystem (btrfs on a single 1.8 TB NVMe).** One pool on `/dev/nvme0n1p2` with a
 separate 1 GB vfat ESP at `/boot`. Four mounted subvolumes: the root **is the top
@@ -265,16 +295,16 @@ is `DUP`, so a scrub self-heals metadata corruption; data is `single`, so scrub
 _detects_ rot there but cannot repair it. Early warning, not redundancy.
 
 **Each Minecraft world is its own NOCOW subvolume** (`world/` under the server dir —
-`hosts/retreat/minecraft/service.nix` creates it) — `.mca` region files are rewritten in
+`hosts/retreat/minecraft/host.nix` creates it) — `.mca` region files are rewritten in
 place and fragment badly under CoW. Scoped to `world/` alone and not the whole server
 tree on purpose: NOCOW files are neither compressed nor checksummed, and the ~500 MB
 pack tree is static and highly compressible, so it stays an ordinary CoW directory. It
 must be created greenfield, which matters — `chattr +C` must land on an _empty_
 subvolume, since NOCOW is inherited only by files created afterward. That is why the
-module makes it declaratively (`v` + `h … +C` tmpfiles rules at boot, ahead of the unit)
-rather than leaving it to a manual ritual. **Resetting a world is therefore still not
-`rm -rf world`**: that either fails on the subvolume or removes it outright, and a
-reflexive `mkdir world` hands back a CoW directory with no error at all. Stop the unit,
+module makes it declaratively (`v` + `h … +C` tmpfiles rules at boot, ahead of the
+guest) rather than leaving it to a manual ritual. **Resetting a world is therefore still
+not `rm -rf world`**: that either fails on the subvolume or removes it outright, and a
+reflexive `mkdir world` hands back a CoW directory with no error at all. Stop the guest,
 `btrfs subvolume delete <serverDir>/world`, and let `systemd-tmpfiles --create` remake
 it.
 
@@ -288,12 +318,14 @@ is load-bearing with more than one pack: it defaults to the subvolume's basename
 every world subvolume is called `world`, so the default would file two different worlds
 under one name in one `snapshot_dir` — disambiguated only positionally by btrbk's `_N`
 collision suffix, and thinned as a single series by retention, since btrbk identifies a
-snapshot set by `snapshot_name` + `snapshot_dir`. `minecraft/service.nix` hooks the
-generated `btrbk-local` unit to quiesce each running server (`save-off` +
-`save-all flush`) around the run, so the world snapshots are consistent rather than
-merely crash-consistent. Not snapshotted: `/nix` (snapshots pin store paths and would
-defeat `nix-collect-garbage`) and `/` (subvolid=5). Snapshots on one disk are not a
-backup — they die with the fs, which a power loss (no UPS) can corrupt wholesale, not
+snapshot set by `snapshot_name` + `snapshot_dir`. `minecraft/host.nix` hooks the
+generated `btrbk-local` unit to quiesce each running server around the run: it asks the
+pack's guest to `save-off` + `save-all flush` and then sync through to the host, since
+the snapshot is taken by the host's kernel on a world the guest's kernel is writing
+(`minecraft/service.nix` has the listener), so the world snapshots are consistent rather
+than merely crash-consistent. Not snapshotted: `/nix` (snapshots pin store paths and
+would defeat `nix-collect-garbage`) and `/` (subvolid=5). Snapshots on one disk are not
+a backup — they die with the fs, which a power loss (no UPS) can corrupt wholesale, not
 just tear a NOCOW file — so each snapshot is also pushed off-box with `btrfs send -p` to
 `rebirth`. rebirth authorizes the receive via `services.btrbk.sshAccess` in
 `hosts/rebirth/btrbk.nix` (a dedicated `btrbk` user, its key pinned to

@@ -9,9 +9,9 @@ _: {
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
-    # Minecraft servers (ATM10, Craftoria 2): native systemd services + host prereqs.
+    # Minecraft servers (ATM10, Craftoria 2), each in its own microVM (./gameservers.nix).
     ./minecraft
-    # btrbk: weekly local snapshots of home + the Minecraft world subvolumes.
+    # btrbk: twice-daily local snapshots of home + the Minecraft world subvolumes.
     ./btrbk.nix
     # Disk swapfile: the low-priority overflow tier layered under zram.
     ./swap.nix

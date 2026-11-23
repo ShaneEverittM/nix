@@ -9,6 +9,10 @@
 
     home-manager.url = "github:nix-community/home-manager/release-26.05";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+
+    # microVMs for the public game servers on retreat (hosts/retreat/gameservers.nix).
+    microvm.url = "github:microvm-nix/microvm.nix";
+    microvm.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =

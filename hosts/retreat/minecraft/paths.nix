@@ -3,9 +3,12 @@
 # instance definitions in ./default.nix, and tests/minecraft-console.nix, which needs
 # the path as a *string* to interpolate into its Python test script.
 #
-# The volume-relative world path btrbk wants is NOT here — ./service.nix derives it as a
+# These are host paths, and each is shared into its pack's guest at the same path (see
+# ./host.nix), so the one string is right on both sides of the VM boundary.
+#
+# The volume-relative world path btrbk wants is NOT here — ./options.nix derives it as a
 # read-only per-server option, and ../btrbk.nix reads it back off the config.
 {
-  craftoria = "/home/shane/Servers/minecraft/craftoria2";
-  atm10 = "/home/shane/Servers/minecraft/atm10";
+  craftoria = "/var/lib/minecraft/craftoria";
+  atm10 = "/var/lib/minecraft/atm10";
 }
