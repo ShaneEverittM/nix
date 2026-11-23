@@ -1,5 +1,5 @@
 {
-  description = "Platform-agnostic Nix config: NixOS hosts (desktop + home server) + standalone home-manager for macOS";
+  description = "Platform-agnostic Nix config: NixOS hosts (headless dev box + home server) + standalone home-manager for macOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -25,7 +25,7 @@
       forAllSystems = nixpkgs.lib.genAttrs systems;
     in
     {
-      # Bare-metal KDE desktop — `nixos-rebuild switch --flake .#retreat` (or `nh os
+      # Bare-metal headless dev box — `nixos-rebuild switch --flake .#retreat` (or `nh os
       # switch`). Formerly a standalone home-manager config on CachyOS; now full NixOS
       # with home-manager folded in (see hosts/retreat/default.nix).
       nixosConfigurations.retreat = import ./hosts/retreat/default.nix {

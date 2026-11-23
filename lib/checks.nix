@@ -10,9 +10,9 @@
 #                  gates (source-only, cheap), plus the `packages.default` buildEnv and
 #                  the exported formatter — outputs that would otherwise never be built
 #                  before someone ran them.
-#   x86_64-linux : both NixOS toplevels (retreat desktop + rebirth server) build — this is
+#   x86_64-linux : both NixOS toplevels (retreat dev box + rebirth server) build — this is
 #                  what catches build-time breakage that pure eval misses, e.g. a wrong
-#                  Warp AppImage hash or a broken substituteInPlace — plus
+#                  fetcher hash or a broken substituteInPlace — plus
 #                  `downstream-linux`, the genericLinux flavor of the downstream check.
 #   aarch64-darwin: the personal macbook home activation, plus `downstream` — a standalone
 #                  home-manager config assembled from the exported homeModules exactly as

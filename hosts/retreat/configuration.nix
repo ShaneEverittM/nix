@@ -1,13 +1,11 @@
-# System configuration for `retreat`, a bare-metal KDE Plasma desktop on NixOS
-# (Minisforum MS-A2; the install was migrated on its NVMe from the retired `exodus`).
+# System configuration for `retreat`, a bare-metal headless NixOS box (Minisforum MS-A2;
+# the install was migrated on its NVMe from the retired `exodus`). It used to be a KDE
+# Plasma desktop, latterly reached through an on-demand Sunshine session; the whole
+# graphical stack (SDDM, Plasma, PipeWire, Sunshine, the GUI apps) has since been
+# dropped -- see git history. The ways in are SSH (LAN or tailnet) and the text console.
 # Host assembly (home-manager, shared NixOS modules) lives in ./default.nix; this file
-# is the system-only layer — hardware, desktop environment, users, and services.
-{
-  pkgs,
-  ...
-}:
-
-{
+# is the system-only layer — hardware, networking, and services.
+_: {
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -25,83 +23,26 @@
     ./sure.nix
     # Enshrouded dedicated server (community Proton container), UDP 15637.
     ./enshrouded.nix
-    # Sunshine remote desktop (Moonlight clients), LAN + tailnet, headless-capable.
-    ./sunshine.nix
   ];
 
+  # 1Password CLI only (`op`). The GUI app -- and with it this host's own SSH agent and
+  # op-ssh-sign -- went with the desktop; keys reach this box through the agent
+  # forwarded over SSH instead (see ./default.nix).
   programs._1password.enable = true;
-  programs._1password-gui.enable = true;
 
   networking.hostName = "retreat";
   networking.networkmanager.enable = true;
 
-  # KDE Plasma 6 on Wayland, with the SDDM display manager.
-  services.xserver.enable = true;
-  services.displayManager.sddm.enable = true;
-  services.desktopManager.plasma6.enable = true;
-
-  # Configure keymap in X11.
-  services.xserver.xkb = {
-    layout = "us";
-    variant = "";
-  };
-
-  # Graphics stack. enable32Bit pulls in the 32-bit GL/Vulkan libraries that Steam,
-  # Proton, and 32-bit Wine need.
-  hardware.graphics = {
-    enable = true;
-    enable32Bit = true;
-  };
-
-  # Single-GPU box: the Minisforum MS-A2's Radeon iGPU drives every output on the
-  # in-kernel amdgpu driver, which the default modesetting stack picks up on its own --
-  # so there is deliberately no videoDrivers / hardware.nvidia here. (This config was
-  # carried over, disk and all, from `exodus`, a dual-GPU tower whose NVIDIA card owned
-  # the displays; see git history for that setup.)
-
-  # Sound with PipeWire.
-  services.pulseaudio.enable = false;
-  security.rtkit.enable = true;
-  services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-  };
-
-  # AppImage runtime. AppImages assume an FHS layout NixOS doesn't provide, so they
-  # can't just be chmod+x'd and run. This module ships an FHS sandbox for them, and
-  # `binfmt = true` registers a kernel handler so any `*.AppImage` executes directly
-  # (no `appimage-run` wrapper). Used by Cider — a paywalled build that can't be
-  # fetched reproducibly into the store, so it lives as a local file in
-  # ~/Applications with only its launcher entry declared in home (see default.nix).
-  programs.appimage = {
-    enable = true;
-    binfmt = true;
-  };
-
-  # Desktop-only extras on the shared shane account (modules/nixos/user.nix owns the
-  # account itself): kate, plus the networkmanager group — NM is this desktop's network
-  # stack (rebirth uses wpa_supplicant), so the group membership lives here rather than
-  # in the shared user.
-  users.users."shane" = {
-    extraGroups = [ "networkmanager" ];
-    packages = with pkgs; [
-      kdePackages.kate
-    ];
-  };
-
-  # Advertise as a workstation on mDNS, on top of the shared avahi publish config.
-  services.avahi.publish.workstation = true;
-
-  # Install firefox.
-  programs.firefox.enable = true;
+  # modules/nixos/user.nix owns the shane account. NetworkManager is this host's network
+  # stack (rebirth uses wpa_supplicant), so the group that lets the account drive
+  # `nmcli` lives here rather than in the shared user.
+  users.users."shane".extraGroups = [ "networkmanager" ];
 
   # Memory-pressure resilience, tuned on this install's previous hardware (`exodus`,
   # 14 GiB) and carried over unchanged to this 32 GB box -- the headroom is far larger
   # now, so the thresholds below are conservative rather than load-bearing; retune if
   # they ever misfire. The history: a JVM Minecraft server (./minecraft) alongside the
-  # desktop with zero swap meant a memory spike couldn't evict anonymous pages: the
+  # then-desktop session with zero swap meant a memory spike couldn't evict anonymous pages: the
   # kernel thrashed /nix/store code pages and livelocked instead of OOM-killing -- which
   # is exactly how exodus hard-froze once (progressive kwin/pipewire/libinput stalls →
   # 31 s freeze → power cycle).
@@ -130,24 +71,10 @@
     freeSwapThreshold = 10;
   };
 
-  # Crash-handling blast radius. A KDE app dying with no session to draw into -- e.g.
-  # 1Password trapping on the SIGTERM systemd sends it at logout -- hands its coredump
-  # to DrKonqi, whose systemd-coredump auto-launcher then recursively crashes on its
-  # own missing display: the launcher aborts, dumps core, is re-launched by the socket,
-  # aborts again... For hours (once observed: ~2 crashes/s for 5h, ~40 GB of coredumps,
-  # a pegged core, ending in a forced power cycle from a blank-on-monitor-replug greeter).
-  #
-  # We don't file KDE bug reports from this box, and `coredumpctl {list,info,gdb}` still
-  # gives backtraces on demand, so mask DrKonqi's coredump auto-launcher (kills the loop
-  # at its mechanism) and its Sentry telemetry uploader. systemd-coredump itself stays
-  # enabled -- just bounded so no future crash-storm can fill the disk. The 1Password
-  # side of the trigger is handled by owning its user service (see ./default.nix).
-  systemd.user.units."drkonqi-coredump-launcher.socket".enable = false;
-  systemd.user.units."drkonqi-coredump-launcher@.service".enable = false;
-  systemd.user.units."drkonqi-sentry-postman.service".enable = false;
-  systemd.user.units."drkonqi-sentry-postman.timer".enable = false;
-  systemd.user.units."drkonqi-sentry-postman.path".enable = false;
-
+  # Bound systemd-coredump so no crash-storm can fill the disk. Sized after a DrKonqi
+  # relaunch loop on the old desktop wrote ~40 GB of coredumps in five hours; DrKonqi is
+  # gone with Plasma, but any crash-looping service could do the same.
+  # `coredumpctl {list,info,gdb}` still gives backtraces on demand.
   systemd.coredump.settings.Coredump = {
     MaxUse = "2G";
     KeepFree = "5G";

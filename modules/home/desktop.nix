@@ -1,6 +1,6 @@
 # Cross-platform desktop/GUI dotfile bundle: the editor, terminal, and IDE config that
 # any machine with a graphical session wants, regardless of OS. Imported by ./darwin.nix
-# (both Macs) and directly by native Linux desktop hosts.
+# (both Macs); a native Linux desktop host would import it directly (none in-repo now).
 #
 # Every module below resolves its own per-OS paths (see e.g. the layout tables in
 # ./vscode.nix and ./warp.nix), so this bundle carries no platform conditionals itself.
