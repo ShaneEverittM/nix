@@ -14,6 +14,8 @@
 let
   cfg = config.publicTailscale.serve;
   tailscale = "${pkgs.tailscale}/bin/tailscale";
+  flock = "${pkgs.util-linux}/bin/flock";
+  lockFile = "/run/tailscale-serve.lock";
 in
 {
   options.publicTailscale.serve = lib.mkOption {
@@ -91,8 +93,13 @@ in
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
-          ExecStart = "${tailscale} serve --bg --https=${toString srv.httpsPort} ${srv.target}";
-          ExecStop = "${tailscale} serve --https=${toString srv.httpsPort} off";
+          # Serialised across every serve unit. `tailscale serve` edits one shared
+          # config as read-modify-write, and a writer that loses the race does not
+          # retry: it exits 1 with "etag mismatch". The units all become ready in the
+          # same second (they wait on the same backend state above), so without the
+          # lock a boot brings up whichever proxy won and leaves the rest failed.
+          ExecStart = "${flock} ${lockFile} ${tailscale} serve --bg --https=${toString srv.httpsPort} ${srv.target}";
+          ExecStop = "${flock} ${lockFile} ${tailscale} serve --https=${toString srv.httpsPort} off";
         };
       }
     ) cfg;
