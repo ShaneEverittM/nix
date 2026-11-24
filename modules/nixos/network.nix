@@ -1,5 +1,5 @@
 # Network discovery + tailnet, shared by every host. The interface stack itself is
-# per-host (retreat: NetworkManager; rebirth: wpa_supplicant) and stays in each
+# per-host (retreat: systemd-networkd; rebirth: wpa_supplicant) and stays in each
 # hosts/<name>/configuration.nix.
 _:
 
@@ -29,6 +29,6 @@ _:
   # tailscaled can capture resolv.conf before the DHCP nameserver lands and end up
   # with an empty upstream list, blackholing every non-tailnet query (first observed
   # on rebirth post-`tailscale up`: MagicDNS names resolved, nothing else did).
-  # NetworkManager on retreat detects resolved and pushes DNS to it natively.
+  # systemd-networkd on retreat hands its DHCP nameservers to resolved natively.
   services.resolved.enable = true;
 }

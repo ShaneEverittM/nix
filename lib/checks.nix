@@ -10,9 +10,9 @@
 #                  gates (source-only, cheap), plus the `packages.default` buildEnv and
 #                  the exported formatter — outputs that would otherwise never be built
 #                  before someone ran them.
-#   x86_64-linux : both NixOS toplevels (retreat desktop + rebirth server) build — this is
+#   x86_64-linux : both NixOS toplevels (retreat dev box + rebirth server) build — this is
 #                  what catches build-time breakage that pure eval misses, e.g. a wrong
-#                  Warp AppImage hash or a broken substituteInPlace — plus
+#                  fetcher hash or a broken substituteInPlace — plus
 #                  `downstream-linux`, the genericLinux flavor of the downstream check.
 #   aarch64-darwin: the personal macbook home activation, plus `downstream` — a standalone
 #                  home-manager config assembled from the exported homeModules exactly as
@@ -162,11 +162,19 @@ let
         retreat-toplevel = self.nixosConfigurations.retreat.config.system.build.toplevel;
         rebirth-toplevel = self.nixosConfigurations.rebirth.config.system.build.toplevel;
 
-        # Boots a VM and smoke-tests both Minecraft servers' console plumbing (FIFO socket
-        # + sandboxing + the autoStart split) with stand-ins for the un-CI-able NeoForge
-        # servers. NixOS VM tests need /dev/kvm, so the Linux CI job enables it (see
-        # .github/workflows/ci.yml).
+        # Boots the guest half of the Minecraft module and smoke-tests its plumbing (FIFO
+        # socket, sandboxing, the snapshot freeze/thaw listener) with stand-ins for the
+        # un-CI-able NeoForge servers. NixOS VM tests need /dev/kvm, so the Linux CI job
+        # enables it (see .github/workflows/ci.yml).
         minecraft-console = import ../tests/minecraft-console.nix { pkgs = pkgsFor system; };
+
+        # Boots the host half of the game-server layer with a stand-in hypervisor: the
+        # firewall that isolates a guest (exercised by a network namespace playing one)
+        # and the `gameserver` enable/disable state machine.
+        gameservers = import ../tests/gameservers.nix {
+          pkgs = pkgsFor system;
+          inherit inputs;
+        };
 
         # Boots the shared modules/nixos base (minus btrfs — its mount options assume
         # the real pools) and asserts behavior: hardened sshd on the wire, the

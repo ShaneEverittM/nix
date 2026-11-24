@@ -1,36 +1,30 @@
-# The modpacks retreat serves. Everything mechanical -- units, console FIFO, RCON wrapper,
-# readiness probe, sandboxing, world subvolume, btrbk quiescing -- lives in ./service.nix;
-# this file is only which packs exist and what is different about each.
+# The modpacks retreat serves. Everything mechanical lives next door: ./service.nix is
+# what runs inside each pack's microVM (units, readiness probe, sandboxing, snapshot
+# hooks), ./host.nix is what stays outside it (storage, snapshots), and
+# ../gameservers.nix is the VM, network and on/off machinery shared with other games.
+# This file is only which packs exist and what is different about each.
 #
-# ONE AT A TIME. This rule dates from the install's previous hardware (exodus: 14 GiB and
-# a KDE session on top), where two modded heaps did not fit and the failure mode was not a
-# clean OOM kill but a thrash-to-livelock (see the memory notes in ../configuration.nix).
-# retreat has 32 GB, so it is now policy rather than necessity -- see the last paragraph
-# for what relaxing it takes. Until then exactly one pack
-# carries autoStart = true and the other is started by hand:
-#     systemctl stop atm10 && systemctl start craftoria
+# ONE AT A TIME, enforced by the shared port. Both packs declare 25565, which puts them
+# on one network slot: one tap, one guest address, one forward from the host. Starting
+# either stops the other, and players keep one address whichever is up:
+#     gameserver enable craftoria     # stops and disables atm10, starts craftoria
+# With 32 GB this is policy, not necessity. Running both at once is a port change on
+# one of them (which gives it its own slot) -- the worlds are separate subvolumes and
+# the guests are already independent, so there is nothing else to untangle.
 #
-# Both packs share 25565/25575, and that is the enforcement. Players keep one address
-# whichever pack is up, and -- more usefully -- starting the second server without stopping
-# the first now FAILS AT THE BIND, loudly and in seconds ("Failed to bind to port"), where
-# distinct ports would have let it succeed and taken the desktop down with it. The cost is
-# that "something answered on RCON" no longer identifies a pack, which is why
-# `<name>-console` checks its own unit state before dialing (see ../minecraft/service.nix).
-#
-# Worlds are separate subvolumes regardless, so there is nothing to untangle if
-# concurrent packs become worth it -- that is a port change plus autoStart,
-# not a migration.
+# `memory` is the guest's RAM and must track -Xmx in the pack's user_jvm_args.txt; see
+# the option in ./options.nix before changing either.
 { pkgs, ... }:
 
 let
   dirs = import ./paths.nix;
 in
 {
-  imports = [ ./service.nix ];
+  imports = [ ./host.nix ];
 
   publicMinecraft.servers = {
     # All the Mods 10: Minecraft 1.21.1 on NeoForge 21.1.x, Java 21. The current
-    # daily-driver pack, so it owns the boot.
+    # daily-driver pack, so it is the one enabled by default.
     #
     # ATM10 is where the THP-vs-G1 hazard in ./service.nix was first diagnosed (a G1
     # SIGSEGV in G1RegionMarkStatsCache on Java 21) -- the tmpfiles rule that forces
@@ -39,26 +33,25 @@ in
       description = "Minecraft server (All the Mods 10, NeoForge 1.21.1)";
       serverDir = dirs.atm10;
       jre = pkgs.jdk21_headless;
-      # Same ports as craftoria, on purpose -- see the header. The pack's generated
-      # server.properties must be edited to agree with these (a fresh ATM10 install ships
-      # enable-rcon=false and no rcon password); the preflight fails the start until it does.
       port = 25565;
       rconPort = 25575;
+      # -Xmx8G
+      memory = 11264;
       autoStart = true;
     };
 
-    # Craftoria 2: NeoForge 26.1.2.76, Java 25. Demoted to manual start, not retired --
-    # the world is live and worth keeping, which is why it stays in the btrbk timeline
-    # regardless of whether it is running (the freeze hook no-ops on a stopped server, and
-    # a stopped server has already flushed on SIGTERM).
+    # Craftoria 2: NeoForge 26.1.2.76, Java 25. Disabled by default, not retired -- the
+    # world is live and worth keeping, which is why it stays in the btrbk timeline
+    # whether or not it is running (the freeze hook no-ops on a stopped guest, and a
+    # stopped server has already flushed on SIGTERM).
     craftoria = {
       description = "Minecraft server (Craftoria 2, NeoForge 26.1.2.76)";
       serverDir = dirs.craftoria;
       jre = pkgs.jdk25_headless;
-      # Unchanged 25565/25575 -- its server.properties already says so, and it is
-      # out-of-store state that would have to be edited in lockstep with any change here.
       port = 25565;
       rconPort = 25575;
+      # -Xmx5G
+      memory = 8192;
       autoStart = false;
     };
   };

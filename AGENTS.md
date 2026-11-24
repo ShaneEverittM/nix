@@ -6,8 +6,8 @@ Guidance for AI coding agents working in this repository.
 
 This is a public, platform-agnostic Nix flake for Shane's personal machines:
 
-- `nixosConfigurations.retreat`: bare-metal NixOS KDE Plasma desktop, with home-manager
-  folded in as a module.
+- `nixosConfigurations.retreat`: bare-metal headless NixOS dev/server box, with
+  home-manager folded in as a module.
 - `nixosConfigurations.rebirth`: headless NixOS home server (repurposed laptop),
   home-manager folded in; only the shared git + shell home modules.
 - `homeConfigurations."shane@macbook"` and `homeConfigurations.shane`: standalone
@@ -29,36 +29,38 @@ private hostnames, private registry URLs, or encrypted secret files.
 
 ## High-level map
 
-| Path                                                     | Purpose                                                                                                                                  |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `flake.nix`                                              | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env.                                         |
-| `hosts/macbook/default.nix`                              | Personal Mac standalone home-manager assembly. No nix-darwin.                                                                            |
-| `hosts/retreat/default.nix`                              | `retreat` NixOS desktop assembly. Folds home-manager in as a module (core + linux + desktop).                                            |
-| `hosts/retreat/configuration.nix`                        | `retreat` system layer: KDE Plasma, PipeWire, crash handling; imports the minecraft/btrbk/swap/beszel/sure/enshrouded/sunshine siblings. |
-| `hosts/retreat/hardware-configuration.nix`               | `retreat` generated hardware scan (filesystems, kernel modules).                                                                         |
-| `hosts/rebirth/default.nix`                              | `rebirth` headless home-server assembly. Home layer: git (via base) + shell + shared CLI set.                                            |
-| `hosts/rebirth/configuration.nix`                        | `rebirth` system layer: Wi-Fi (wpa_supplicant), lid-switch.                                                                              |
-| `hosts/rebirth/hardware-configuration.nix`               | `rebirth` generated hardware scan (filesystems, kernel modules).                                                                         |
-| `modules/home/default.nix`                               | Universal home-manager core bundle.                                                                                                      |
-| `modules/home/common.nix`                                | Owns the `publicHome.*` option namespace and shared cross-host config.                                                                   |
-| `modules/home/{git,shell,rust,bun,java}.nix`             | Shared home-manager behavior in the core bundle (git + shell are also on rebirth).                                                       |
-| `modules/home/onepassword.nix`                           | `SSH_AUTH_SOCK` for the 1Password agent; per-platform socket path.                                                                       |
-| `modules/home/ssh.nix`                                   | Owns `~/.ssh/config`: aliases for this repo's hosts, plus an `Include config.local` for non-public hosts.                                |
-| `modules/home/linux.nix`                                 | Shared Linux layer.                                                                                                                      |
-| `modules/home/generic-linux.nix`                         | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS; downstream-only now.                                |
-| `modules/home/desktop.nix`                               | Cross-platform GUI dotfile bundle (vscode + zed + warp + jetbrains).                                                                     |
-| `modules/home/darwin.nix`                                | macOS-only layer. Imports `desktop.nix`.                                                                                                 |
-| `modules/home/{vscode,zed,warp,jetbrains}.nix`           | Cross-platform dotfile/app modules; each resolves its own per-OS paths.                                                                  |
-| `modules/home/warp-settings.nix`                         | Shared Warp settings attr schema (macOS + Linux).                                                                                        |
-| `modules/nixos/default.nix`                              | Shared NixOS base bundle; hosts import this.                                                                                             |
-| `modules/nixos/{core,user,ssh,network,memory,btrfs}.nix` | Single-concern base modules: nix/boot/locale/nh, account + hm fold-in, sshd, avahi/tailscale/resolved, zram/earlyoom, btrfs tuning.      |
-| `lib/identity.nix`                                       | Single-sourced public identity (login name, name, email, SSH public key).                                                                |
-| `lib/mk-pkgs.nix`                                        | The one shared nixpkgs instantiation (unfree predicate baked in).                                                                        |
-| `lib/checks.nix`                                         | CI gates: lint checks, downstream contract checks, host toplevel builds.                                                                 |
-| `lib/packages.nix`                                       | Stable, platform-agnostic shared CLI package list.                                                                                       |
-| `lib/unstable-packages.nix`                              | Small platform-agnostic package lane from `nixpkgs-unstable`.                                                                            |
-| `files/`                                                 | Public dotfiles used by home-manager modules.                                                                                            |
-| `Brewfile`                                               | Mac-only Homebrew base outside home-manager.                                                                                             |
+| Path                                                     | Purpose                                                                                                                                        |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flake.nix`                                              | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env.                                               |
+| `hosts/macbook/default.nix`                              | Personal Mac standalone home-manager assembly. No nix-darwin.                                                                                  |
+| `hosts/retreat/default.nix`                              | `retreat` headless NixOS assembly. Folds home-manager in as a module (core + linux + claude-code).                                             |
+| `hosts/retreat/configuration.nix`                        | `retreat` system layer: networking, 1Password CLI, memory + coredump limits; imports the minecraft/btrbk/swap/beszel/sure/enshrouded siblings. |
+| `hosts/retreat/gameservers.nix`                          | microVM layer for the public game servers: guest isolation firewall, port forwards, the `gameserver` on/off command.                           |
+| `hosts/retreat/minecraft/`                               | Minecraft packs (`default.nix`), options, the guest module (`service.nix`) and the host module (`host.nix`).                                   |
+| `hosts/retreat/hardware-configuration.nix`               | `retreat` generated hardware scan (filesystems, kernel modules).                                                                               |
+| `hosts/rebirth/default.nix`                              | `rebirth` headless home-server assembly. Home layer: git (via base) + shell + shared CLI set.                                                  |
+| `hosts/rebirth/configuration.nix`                        | `rebirth` system layer: Wi-Fi (wpa_supplicant), lid-switch.                                                                                    |
+| `hosts/rebirth/hardware-configuration.nix`               | `rebirth` generated hardware scan (filesystems, kernel modules).                                                                               |
+| `modules/home/default.nix`                               | Universal home-manager core bundle.                                                                                                            |
+| `modules/home/common.nix`                                | Owns the `publicHome.*` option namespace and shared cross-host config.                                                                         |
+| `modules/home/{git,shell,rust,bun,java}.nix`             | Shared home-manager behavior in the core bundle (git + shell are also on rebirth).                                                             |
+| `modules/home/onepassword.nix`                           | `SSH_AUTH_SOCK` for the 1Password agent; per-platform socket path.                                                                             |
+| `modules/home/ssh.nix`                                   | Owns `~/.ssh/config`: aliases for this repo's hosts, plus an `Include config.local` for non-public hosts.                                      |
+| `modules/home/linux.nix`                                 | Shared Linux layer.                                                                                                                            |
+| `modules/home/generic-linux.nix`                         | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS; downstream-only now.                                      |
+| `modules/home/desktop.nix`                               | Cross-platform GUI dotfile bundle (vscode + zed + warp + jetbrains).                                                                           |
+| `modules/home/darwin.nix`                                | macOS-only layer. Imports `desktop.nix`.                                                                                                       |
+| `modules/home/{vscode,zed,warp,jetbrains}.nix`           | Cross-platform dotfile/app modules; each resolves its own per-OS paths.                                                                        |
+| `modules/home/warp-settings.nix`                         | Shared Warp settings attr schema (macOS + Linux).                                                                                              |
+| `modules/nixos/default.nix`                              | Shared NixOS base bundle; hosts import this.                                                                                                   |
+| `modules/nixos/{core,user,ssh,network,memory,btrfs}.nix` | Single-concern base modules: nix/boot/locale/nh, account + hm fold-in, sshd, avahi/tailscale/resolved, zram/earlyoom, btrfs tuning.            |
+| `lib/identity.nix`                                       | Single-sourced public identity (login name, name, email, SSH public key).                                                                      |
+| `lib/mk-pkgs.nix`                                        | The one shared nixpkgs instantiation (unfree predicate baked in).                                                                              |
+| `lib/checks.nix`                                         | CI gates: lint checks, downstream contract checks, host toplevel builds.                                                                       |
+| `lib/packages.nix`                                       | Stable, platform-agnostic shared CLI package list.                                                                                             |
+| `lib/unstable-packages.nix`                              | Small platform-agnostic package lane from `nixpkgs-unstable`.                                                                                  |
+| `files/`                                                 | Public dotfiles used by home-manager modules.                                                                                                  |
+| `Brewfile`                                               | Mac-only Homebrew base outside home-manager.                                                                                                   |
 
 The `README.md` has the detailed human-facing explanation. Use this file for quick rules
 and workflow reminders.
@@ -96,28 +98,29 @@ and workflow reminders.
 
 ## Where to make common changes
 
-| Change                                   | Edit here                                                                                                                 |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Add shared CLI tool                      | `lib/packages.nix`                                                                                                        |
-| Add shared CLI tool that needs unstable  | `lib/unstable-packages.nix`                                                                                               |
-| Add shell alias/init behavior            | `modules/home/shell.nix`                                                                                                  |
-| Add git behavior                         | `modules/home/git.nix`                                                                                                    |
-| Add an SSH host alias                    | `modules/home/ssh.nix` (non-public hosts go in an unmanaged `~/.ssh/config.local`)                                        |
-| Add host identity/path/value             | the relevant `hosts/*/default.nix` via `publicHome.*`                                                                     |
-| Add reusable per-host option             | `modules/home/common.nix` or the owning module's `options.publicHome.*`                                                   |
-| Add NixOS behavior for every NixOS host  | the matching single-concern `modules/nixos/*.nix` (new concerns: new module + bundle line in `modules/nixos/default.nix`) |
-| Add JVM/gradle behavior                  | `modules/home/java.nix`                                                                                                   |
-| Add retreat-only system behavior         | `hosts/retreat/configuration.nix`                                                                                         |
-| Add/change a Minecraft pack              | `hosts/retreat/minecraft/default.nix` (a pack) or `minecraft/service.nix` (behavior every pack gets)                      |
-| Add rebirth-only system behavior         | `hosts/rebirth/configuration.nix`                                                                                         |
-| Change name/email/SSH public key         | `lib/identity.nix`                                                                                                        |
-| Add behavior for every Linux host        | `modules/home/linux.nix`                                                                                                  |
-| Add a non-NixOS distro workaround        | `modules/home/generic-linux.nix`                                                                                          |
-| Add GUI/dotfile behavior for any desktop | `modules/home/desktop.nix` plus `vscode.nix`, `zed.nix`, `warp.nix`, or `jetbrains.nix`                                   |
-| Add macOS-only behavior                  | `modules/home/darwin.nix`                                                                                                 |
-| Change shared Warp settings              | `modules/home/warp-settings.nix`                                                                                          |
-| Change source dotfiles                   | `files/`                                                                                                                  |
-| Change CI gates                          | `lib/checks.nix` (the workflow `.github/workflows/ci.yml` is just its driver)                                             |
+| Change                                   | Edit here                                                                                                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Add shared CLI tool                      | `lib/packages.nix`                                                                                                                                     |
+| Add shared CLI tool that needs unstable  | `lib/unstable-packages.nix`                                                                                                                            |
+| Add shell alias/init behavior            | `modules/home/shell.nix`                                                                                                                               |
+| Add git behavior                         | `modules/home/git.nix`                                                                                                                                 |
+| Add an SSH host alias                    | `modules/home/ssh.nix` (non-public hosts go in an unmanaged `~/.ssh/config.local`)                                                                     |
+| Add host identity/path/value             | the relevant `hosts/*/default.nix` via `publicHome.*`                                                                                                  |
+| Add reusable per-host option             | `modules/home/common.nix` or the owning module's `options.publicHome.*`                                                                                |
+| Add NixOS behavior for every NixOS host  | the matching single-concern `modules/nixos/*.nix` (new concerns: new module + bundle line in `modules/nixos/default.nix`)                              |
+| Add JVM/gradle behavior                  | `modules/home/java.nix`                                                                                                                                |
+| Add retreat-only system behavior         | `hosts/retreat/configuration.nix`                                                                                                                      |
+| Add/change a Minecraft pack              | `hosts/retreat/minecraft/default.nix` (a pack), `minecraft/service.nix` (in-guest behavior every pack gets), `minecraft/host.nix` (storage, snapshots) |
+| Change game-server VM/network behavior   | `hosts/retreat/gameservers.nix`                                                                                                                        |
+| Add rebirth-only system behavior         | `hosts/rebirth/configuration.nix`                                                                                                                      |
+| Change name/email/SSH public key         | `lib/identity.nix`                                                                                                                                     |
+| Add behavior for every Linux host        | `modules/home/linux.nix`                                                                                                                               |
+| Add a non-NixOS distro workaround        | `modules/home/generic-linux.nix`                                                                                                                       |
+| Add GUI/dotfile behavior for any desktop | `modules/home/desktop.nix` plus `vscode.nix`, `zed.nix`, `warp.nix`, or `jetbrains.nix`                                                                |
+| Add macOS-only behavior                  | `modules/home/darwin.nix`                                                                                                                              |
+| Change shared Warp settings              | `modules/home/warp-settings.nix`                                                                                                                       |
+| Change source dotfiles                   | `files/`                                                                                                                                               |
+| Change CI gates                          | `lib/checks.nix` (the workflow `.github/workflows/ci.yml` is just its driver)                                                                          |
 
 ## Validation workflow
 
