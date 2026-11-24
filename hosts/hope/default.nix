@@ -57,6 +57,10 @@ inputs.home-manager.lib.homeManagerConfiguration {
       # the shared value washes out text here. Deep-merged over the shared
       # appearance.window block, so override_blur and zoom_level still come from it.
       programs.warp.settings.appearance.window.override_opacity = 90;
+
+      # Run as a native Wayland client. Warp on Linux defaults to X11 (XWayland) even
+      # in a Wayland session; this is its "Use Wayland for window management" toggle.
+      programs.warp.settings.system.force_x11 = false;
     }
   ];
 }
