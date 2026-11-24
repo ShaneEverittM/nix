@@ -3,8 +3,8 @@
 #
 # zsh is the interactive shell everywhere, but only NixOS can set the login shell
 # declaratively (modules/nixos/user.nix). macOS already defaults to zsh; on a non-NixOS
-# Linux distro the distro owns /etc/passwd, so a downstream consumer there needs a
-# one-time `chsh` (see modules/home/generic-linux.nix for that downstream-only case).
+# Linux distro the distro owns /etc/passwd, so a host there (hope, or a downstream
+# consumer of modules/home/generic-linux.nix) needs a one-time `chsh`.
 {
   config,
   lib,

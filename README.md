@@ -6,8 +6,10 @@ assemblies for
 - a **headless NixOS dev/server box** (host `retreat`, bare metal; home-manager folded
   in as a NixOS module),
 - a **headless NixOS home server** (host `rebirth`, a repurposed laptop; home-manager
-  folded in, git + shell modules only), and
-- a **personal macOS** machine (standalone home-manager, no nix-darwin)
+  folded in, git + shell modules only),
+- a **personal macOS** machine (standalone home-manager, no nix-darwin), and
+- a **CachyOS desktop** (host `hope`, KDE; standalone home-manager on a non-NixOS
+  distro)
 
 (A NixOS-on-WSL host existed before the two physical machines did; it was dropped once
 they made it redundant — see git history.)
@@ -53,6 +55,7 @@ It is also designed to be consumed by private consumers, like at work
 | `modules/nixos/memory.nix`                     | zram + earlyoom baseline.                                                                            |
 | `modules/nixos/btrfs.nix`                      | compression/scrub/trim for the hosts' identical btrfs layouts.                                       |
 | `hosts/macbook/default.nix`                    | homeConfigurations."shane@macbook" (home darwin).                                                    |
+| `hosts/hope/default.nix`                       | homeConfigurations."shane@hope" (home linux, non-NixOS).                                             |
 | `hosts/retreat/default.nix`                    | nixosConfigurations.retreat (base bundle + home core/linux + claude-code).                           |
 | `hosts/retreat/configuration.nix`              | retreat system layer (headless: networking, 1Password CLI, memory + coredump limits).                |
 | `hosts/retreat/minecraft/`                     | retreat Minecraft servers: packs, options, guest module (`service.nix`), host module (`host.nix`).   |
@@ -80,11 +83,11 @@ by **which modules a host imports**, not by `mkIf` — `mkIf` guards values, not
 existence (a NixOS-only option can't be referenced in a Darwin eval at all).
 
 On the Linux side, `linux.nix` is what every Linux host shares, and `generic-linux.nix`
-holds the non-NixOS distro fixups that would be actively wrong on NixOS. All in-repo
-Linux hosts run NixOS today, so `generic-linux.nix` has no in-repo consumer — it stays
-exported via `homeModules.genericLinux` for downstream non-NixOS Linux. Orthogonally,
-`desktop.nix` carries the GUI dotfiles for any machine with a graphical session — macOS
-only today; the headless NixOS hosts (retreat, rebirth) do not import it.
+holds the non-NixOS distro fixups that would be actively wrong on NixOS. Its one in-repo
+consumer is `hope` (CachyOS); it is also exported via `homeModules.genericLinux` for
+downstream non-NixOS Linux. Orthogonally, `desktop.nix` carries the GUI dotfiles for any
+machine with a graphical session — the Macs and `hope`; the headless NixOS hosts
+(retreat, rebirth) do not import it.
 
 The shared modules are **option-driven**: behavior lives in the module, per-machine
 values come from the `publicHome.*` options a host sets — `username` (derives
@@ -120,15 +123,15 @@ symlink, and GitHub Copilot gets a short entrypoint through
 nh os switch
 ```
 
-**Mac:**
+**Mac and hope (both standalone home-manager):**
 
 ```bash
 nh home switch
 ```
 
 `nh os` builds the NixOS host matching the running system's hostname (`retreat` on the
-dev box, `rebirth` on the home server). `nh home` auto-detects `<user>@<hostname>` and
-falls back to the `shane` alias on the Mac.
+dev box, `rebirth` on the home server). `nh home` auto-detects `<user>@<hostname>`
+(`shane@hope` on the CachyOS desktop) and falls back to the `shane` alias on the Mac.
 
 Edit the layer that fits the change, then rebuild. The flake is read from the git tree,
 so **new files must be `git add`-ed** before a rebuild/switch will see them.
@@ -184,6 +187,26 @@ the settings schema itself is shared). The `programs.warp.packageSource` option 
 lets a downstream consumer install a Warp build through Nix (e.g. `"stable"` or a
 source-built `"local-oss"` fork), but the public hosts here leave it at the default
 `"none"`.
+
+## hope (CachyOS desktop) Notes
+
+`hope` is a KDE desktop running CachyOS. Arch owns the system (packages, display
+manager, login shell, the 1Password and Warp apps); Nix is installed alongside it and
+home-manager owns only the home directory, exactly like the Mac.
+`modules/home/generic-linux.nix` bridges the foreign distro and the Nix store.
+
+One-time bootstrap, after installing Nix (with flakes enabled):
+
+```bash
+# nh isn't on PATH until the first activation, so run home-manager straight from the
+# flake. -b moves the distro's stock ~/.zshrc, ~/.bashrc and any hand-written
+# ~/.ssh/config aside instead of refusing to activate over them.
+nix run home-manager/release-26.05 -- switch -b backup --flake ~/.config/nix#shane@hope
+```
+
+After that, `nh home switch` is enough. The shared shell config is zsh, but CachyOS
+defaults the login shell to fish and the distro owns `/etc/passwd`, so switch it once
+with `chsh -s /usr/bin/zsh`.
 
 ## retreat (headless NixOS dev box) Notes
 
@@ -488,6 +511,7 @@ rather than conditionals in the shell config. `modules/home/onepassword.nix` own
 | Host    | Agent socket                                  | Signer                                       |
 | ------- | --------------------------------------------- | -------------------------------------------- |
 | macOS   | `~/Library/Group Containers/...`              | `/Applications/1Password.app/...`            |
+| hope    | `~/.1password/agent.sock` (native)            | `/opt/1Password/op-ssh-sign` (distro)        |
 | retreat | `~/.1password/agent.sock` (native)            | `${pkgs._1password-gui}/…/op-ssh-sign` (Nix) |
 | rebirth | forwarded agent (`ssh -A` from a workstation) | none — `ssh-keygen` + forwarded agent        |
 

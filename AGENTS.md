@@ -12,17 +12,18 @@ This is a public, platform-agnostic Nix flake for Shane's personal machines:
   home-manager folded in; only the shared git + shell home modules.
 - `homeConfigurations."shane@macbook"` and `homeConfigurations.shane`: standalone
   home-manager for a personal macOS machine.
+- `homeConfigurations."shane@hope"`: standalone home-manager for a CachyOS (non-NixOS)
+  KDE desktop.
 - `homeModules.*` and `nixosModules.*`: reusable public modules consumed by a separate
   private work-Mac repo.
 
 Both NixOS hosts import the shared base bundle `modules/nixos/` (single-concern modules
 mirroring `modules/home/`: core, user, ssh, network, memory, btrfs — with the identity
 from `lib/identity.nix`). "Linux" in this repo means **any** Linux host; non-NixOS
-distro workarounds go in `generic-linux.nix`, which must never reach a NixOS host. All
-in-repo Linux hosts run NixOS, so `generic-linux.nix` currently has no in-repo consumer
-— it stays exported via `homeModules.genericLinux` for downstream non-NixOS Linux use.
-(A NixOS-on-WSL host existed before the physical machines; it was dropped — see git
-history.)
+distro workarounds go in `generic-linux.nix`, which must never reach a NixOS host. Its
+one in-repo consumer is `hope` (CachyOS), the only non-NixOS Linux host; it is also
+exported via `homeModules.genericLinux` for downstream use. (A NixOS-on-WSL host existed
+before the physical machines; it was dropped — see git history.)
 
 Keep this repo safe to publish. Do not add secrets, work-internal settings, tokens,
 private hostnames, private registry URLs, or encrypted secret files.
@@ -33,6 +34,7 @@ private hostnames, private registry URLs, or encrypted secret files.
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `flake.nix`                                              | Inputs and public outputs: NixOS hosts, Mac home configs, reusable modules, default package env.                                                             |
 | `hosts/macbook/default.nix`                              | Personal Mac standalone home-manager assembly. No nix-darwin.                                                                                                |
+| `hosts/hope/default.nix`                                 | CachyOS desktop standalone home-manager assembly (core + linux + generic-linux + desktop). Arch owns the system.                                             |
 | `hosts/retreat/default.nix`                              | `retreat` headless NixOS assembly. Folds home-manager in as a module (core + linux + claude-code).                                                           |
 | `hosts/retreat/configuration.nix`                        | `retreat` system layer: networking, 1Password CLI, memory + coredump limits; imports the minecraft/btrbk/swap/beszel/sure/enshrouded/plex/timelock siblings. |
 | `hosts/retreat/gameservers.nix`                          | microVM layer for the public game servers: guest isolation firewall, port forwards, the `gameserver` on/off command.                                         |
@@ -47,7 +49,7 @@ private hostnames, private registry URLs, or encrypted secret files.
 | `modules/home/onepassword.nix`                           | `SSH_AUTH_SOCK` for the 1Password agent; per-platform socket path.                                                                                           |
 | `modules/home/ssh.nix`                                   | Owns `~/.ssh/config`: aliases for this repo's hosts, plus an `Include config.local` for non-public hosts.                                                    |
 | `modules/home/linux.nix`                                 | Shared Linux layer.                                                                                                                                          |
-| `modules/home/generic-linux.nix`                         | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS; downstream-only now.                                                    |
+| `modules/home/generic-linux.nix`                         | Non-NixOS distro fixups (XDG data dirs, locale archive, fontconfig). Never on NixOS; in-repo consumer: hope.                                                 |
 | `modules/home/desktop.nix`                               | Cross-platform GUI dotfile bundle (vscode + zed + warp + jetbrains).                                                                                         |
 | `modules/home/darwin.nix`                                | macOS-only layer. Imports `desktop.nix`.                                                                                                                     |
 | `modules/home/{vscode,zed,warp,jetbrains}.nix`           | Cross-platform dotfile/app modules; each resolves its own per-OS paths.                                                                                      |
@@ -141,6 +143,7 @@ nix flake check --all-systems --no-build --no-write-lock-file --show-trace
 nix eval .#nixosConfigurations.retreat.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#nixosConfigurations.rebirth.config.system.build.toplevel.drvPath --no-write-lock-file
 nix eval .#homeConfigurations."shane@macbook".activationPackage.drvPath --no-write-lock-file
+nix eval .#homeConfigurations."shane@hope".activationPackage.drvPath --no-write-lock-file
 ```
 
 Notes:

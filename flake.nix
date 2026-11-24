@@ -1,5 +1,5 @@
 {
-  description = "Platform-agnostic Nix config: NixOS hosts (headless dev box + home server) + standalone home-manager for macOS";
+  description = "Platform-agnostic Nix config: NixOS hosts (headless dev box + home server) + standalone home-manager for macOS and a CachyOS desktop";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -44,8 +44,9 @@
         system = "x86_64-linux";
       };
 
-      # Standalone home-manager hosts (no nix-darwin, no NixOS): the personal Mac. The
-      # Mac config is evaluable anywhere but buildable only on a Darwin builder.
+      # Standalone home-manager hosts (no nix-darwin, no NixOS): the personal Mac and
+      # the CachyOS desktop. The Mac config is evaluable anywhere but buildable only on
+      # a Darwin builder.
       homeConfigurations =
         let
           macbook = import ./hosts/macbook/default.nix {
@@ -56,11 +57,18 @@
         {
           "shane@macbook" = macbook;
 
+          # CachyOS desktop (non-NixOS Linux). The hostname is literally "hope", so
+          # `nh home switch` finds this by <username>@<hostname> with no -c.
+          "shane@hope" = import ./hosts/hope/default.nix {
+            inherit inputs;
+            system = "x86_64-linux";
+          };
+
           # nh home auto-detects <username>@<hostname>, then <username>. Keep
           # this alias so the public Mac can use the short nh home commands even
           # when its hostname is not literally "macbook". (The NixOS hosts fold
-          # home-manager into the system build and never use `nh home`, so this
-          # fallback is Darwin-only in practice.)
+          # home-manager into the system build and never use `nh home`, and hope
+          # matches by hostname above, so this fallback is Darwin-only in practice.)
           shane = macbook;
         };
 

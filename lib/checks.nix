@@ -12,8 +12,9 @@
 #                  before someone ran them.
 #   x86_64-linux : both NixOS toplevels (retreat dev box + rebirth server) build — this is
 #                  what catches build-time breakage that pure eval misses, e.g. a wrong
-#                  fetcher hash or a broken substituteInPlace — plus
-#                  `downstream-linux`, the genericLinux flavor of the downstream check.
+#                  fetcher hash or a broken substituteInPlace — plus the `hope` home
+#                  activation (CachyOS desktop) and `downstream-linux`, the genericLinux
+#                  flavor of the downstream check.
 #   aarch64-darwin: the personal macbook home activation, plus `downstream` — a standalone
 #                  home-manager config assembled from the exported homeModules exactly as
 #                  the private work-Mac repo consumes them (default + darwin, outOfStore
@@ -185,10 +186,13 @@ let
           inherit inputs;
         };
 
+        # The CachyOS desktop's standalone home activation (non-NixOS Linux), the Linux
+        # twin of the aarch64-darwin `macbook` check below.
+        hope = self.homeConfigurations."shane@hope".activationPackage;
+
         # The genericLinux flavor of the downstream check: homeModules.default + linux
-        # + genericLinux, as a downstream non-NixOS Linux box would consume them. The
-        # only coverage genericLinux has — it's exported for exactly that consumer and
-        # imported by no in-repo host (all Linux hosts are NixOS).
+        # + genericLinux, as a downstream non-NixOS Linux box would consume them through
+        # the exported interface (in-repo, only hope imports genericLinux, by path).
         downstream-linux =
           (home-manager.lib.homeManagerConfiguration {
             pkgs = pkgsFor system;
