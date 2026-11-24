@@ -60,6 +60,7 @@ It is also designed to be consumed by private consumers, like at work
 | `hosts/retreat/{btrbk,swap,beszel}.nix`        | retreat services: snapshots, swap tiers, metrics.                                                    |
 | `hosts/retreat/sure.nix`                       | Sure personal-finance app: upstream containers under podman, tailnet-only.                           |
 | `hosts/retreat/enshrouded.nix`                 | Enshrouded dedicated server: community Proton container under podman, in its own microVM, UDP 15637. |
+| `hosts/retreat/timelock.nix`                   | `timelock` command: a CPU-bound delay (time-lock puzzle) in front of admin credentials.              |
 | `hosts/retreat/tailscale-serve.nix`            | `publicTailscale.serve.*`: declarative tailnet-only HTTPS proxies (beszel, sure).                    |
 | `hosts/rebirth/default.nix`                    | nixosConfigurations.rebirth (base bundle + home git/shell/CLI set).                                  |
 | `hosts/rebirth/configuration.nix`              | rebirth system layer (Wi-Fi, lid-switch).                                                            |
@@ -200,10 +201,10 @@ development still happens here — just remotely. `desktop.nix` is not imported.
 
 `hosts/retreat/configuration.nix` is the system layer (the wired uplink on
 systemd-networkd, the 1Password CLI, memory tuning, coredump bounds, and — via sibling
-files — the Minecraft/btrbk/swap/beszel/sure/enshrouded stack); the `shane` account, zsh
-login shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared base.
-`generic-linux.nix` is **not** imported — its foreign-distro fixups (`XDG_DATA_DIRS`,
-`LOCALE_ARCHIVE`) are things NixOS already handles natively.
+files — the Minecraft/btrbk/swap/beszel/sure/enshrouded/timelock stack); the `shane`
+account, zsh login shell, sshd, btrfs tuning, and `allowUnfree` all come from the shared
+base. `generic-linux.nix` is **not** imported — its foreign-distro fixups
+(`XDG_DATA_DIRS`, `LOCALE_ARCHIVE`) are things NixOS already handles natively.
 
 First-boot setup (not Nix-managed):
 
