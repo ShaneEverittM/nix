@@ -23,6 +23,8 @@ _: {
     ./sure.nix
     # Enshrouded dedicated server (community Proton container), UDP 15637.
     ./enshrouded.nix
+    # Plex Media Server (native), LAN + tailnet; media in /srv/media.
+    ./plex.nix
     # `timelock`: a CPU-bound delay in front of admin credentials (puzzles are state, not here).
     ./timelock.nix
   ];
