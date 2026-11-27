@@ -21,11 +21,30 @@
 #
 # PLEX.TV. Two settings under Settings -> Network live in Plex's own state and matter:
 # "Preferred network interface" is the wired LAN port, and "Custom server access URLs"
-# holds this host's tailnet name on :32400. Left alone, Plex publishes every interface
-# address to plex.tv in one request, and plex.tv's edge answers 403 to any request that
-# names an address in Tailscale's 100.64.0.0/10 -- so the whole update failed, hourly,
-# and plex.tv knew no address for the server at all. The custom URL replaces the raw
-# tailnet address with a hostname, which passes. After a reprovision, set both again.
+# holds this host's tailnet address in Plex's own plex.direct form,
+#   https://<tailnet IPv4 with dashes for dots>.<hash>.plex.direct:32400
+# where <hash> is the one in the certificate Plex serves on :32400 (its subject is
+# *.<hash>.plex.direct). Why both:
+#   - Left alone, Plex publishes every interface address to plex.tv in one request, and
+#     plex.tv's edge answers 403 to any request that names an address in Tailscale's
+#     100.64.0.0/10 -- so the whole update failed, hourly, and plex.tv knew no address
+#     for the server at all. A hostname in place of the raw address passes.
+#   - It has to be the plex.direct name, not the tailnet's own ts.net name: Plex's
+#     certificate only covers plex.direct, and the official apps refuse a connection
+#     whose certificate does not match, so with the ts.net name they could not reach
+#     the server from off the LAN even over Tailscale.
+# After a reprovision, set both again; a new server identity means a new <hash>.
+#
+# Two more, set while chasing the official apps' "remote playback needs a subscription"
+# prompt over Tailscale. "Enable Relay" is off, since nothing here uses Plex's relay.
+# And LanNetworksBandwidth="192.168.1.0/24,100.64.0.0/10" is in Preferences.xml (the
+# UI field for it, "LAN Networks", is not shown on this server; edit the file with Plex
+# stopped), which makes the server count tailnet clients as local. Neither removes the
+# prompt: the official apps decide "remote" themselves, before asking the server for a
+# stream. Third-party clients and the web app are not affected. Do not try to fix it by
+# advertising this host's LAN address as a Tailscale subnet route: Plex labels
+# connections that arrive that way as WAN, and the route pulls LAN machines that run
+# Tailscale onto the same path, so they turn "remote" too.
 #
 # MEDIA lives in /srv/media, its own subvolume, owned by the login user so files can be
 # copied in over SSH/rsync without sudo; Plex only reads it. It must not live under
