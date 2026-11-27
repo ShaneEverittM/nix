@@ -86,7 +86,7 @@ in
     # Seek-bar preview thumbnails that were never generated for an item.
     "~Error opening file .*/Indexes/index-sd.bif.* - No such file or directory"
     # Said once on every clean stop and start.
-    "~Network Service: Error in advertiser handle read: 125 .Operation canceled."
+    "~Error in (advertiser|browser) handle read: 125 .Operation canceled."
     "~CERT/OCSP. getCertInfo failed; skipping stapling"
     "~MyPlex: attempted a reachability check but we.re not yet mapped"
     "~Unrecognized MediaProvider feature: "
