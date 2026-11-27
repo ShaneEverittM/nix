@@ -19,6 +19,8 @@ _: {
     ./tailscale-serve.nix
     # Beszel metrics dashboard (hub + agent) exposed over Tailscale.
     ./beszel.nix
+    # Cockpit web console (units, logs, storage, terminal) exposed over Tailscale.
+    ./cockpit.nix
     # Sure personal-finance app (upstream containers) exposed over Tailscale.
     ./sure.nix
     # Enshrouded dedicated server (community Proton container), UDP 15637.
