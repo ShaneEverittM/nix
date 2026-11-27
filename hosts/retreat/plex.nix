@@ -19,6 +19,14 @@
 # then open http://localhost:32400/web, sign in, and add libraries pointing at
 # /srv/media/movies and /srv/media/tv. Nothing about the account lives in this flake.
 #
+# PLEX.TV. Two settings under Settings -> Network live in Plex's own state and matter:
+# "Preferred network interface" is the wired LAN port, and "Custom server access URLs"
+# holds this host's tailnet name on :32400. Left alone, Plex publishes every interface
+# address to plex.tv in one request, and plex.tv's edge answers 403 to any request that
+# names an address in Tailscale's 100.64.0.0/10 -- so the whole update failed, hourly,
+# and plex.tv knew no address for the server at all. The custom URL replaces the raw
+# tailnet address with a hostname, which passes. After a reprovision, set both again.
+#
 # MEDIA lives in /srv/media, its own subvolume, owned by the login user so files can be
 # copied in over SSH/rsync without sudo; Plex only reads it. It must not live under
 # /home: the unit runs with ProtectHome, and `home` is in the btrbk timeline. /srv/media
@@ -30,7 +38,7 @@
 # identity. Also not backed up off-box. Plex keeps its own rotating database backups
 # inside that directory, which cover a corrupt database but not a dead disk; losing it
 # means re-claiming the server and re-scanning, with watch state gone.
-_:
+{ lib, ... }:
 
 let
   identity = import ../../lib/identity.nix;
@@ -78,6 +86,13 @@ in
     # Seek-bar preview thumbnails that were never generated for an item.
     "~Error opening file .*/Indexes/index-sd.bif.* - No such file or directory"
   ];
+
+  # The NixOS module stops Plex with SIGQUIT, sent to the whole control group. The unit's
+  # main process is not Plex but the bubblewrap sandbox it runs in, and SIGQUIT's default
+  # action there is a core dump: every stop (so every switch that restarts Plex) logged
+  # a crash with a backtrace and left the unit "failed with result core-dump". SIGTERM
+  # shuts Plex down just as cleanly and bubblewrap simply exits on it.
+  systemd.services.plex.serviceConfig.KillSignal = lib.mkForce "SIGTERM";
 
   systemd.tmpfiles.rules = [
     "d /srv 0755 root root - -"
