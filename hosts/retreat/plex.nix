@@ -38,7 +38,7 @@
 # identity. Also not backed up off-box. Plex keeps its own rotating database backups
 # inside that directory, which cover a corrupt database but not a dead disk; losing it
 # means re-claiming the server and re-scanning, with watch state gone.
-{ lib, ... }:
+{ pkgs, ... }:
 
 let
   identity = import ../../lib/identity.nix;
@@ -85,14 +85,32 @@ in
     "~QueryParser: Invalid field .* found, ignoring"
     # Seek-bar preview thumbnails that were never generated for an item.
     "~Error opening file .*/Indexes/index-sd.bif.* - No such file or directory"
+    # Said once on every clean stop and start.
+    "~Network Service: Error in advertiser handle read: 125 .Operation canceled."
+    "~CERT/OCSP. getCertInfo failed; skipping stapling"
+    "~MyPlex: attempted a reachability check but we.re not yet mapped"
+    "~Unrecognized MediaProvider feature: "
   ];
 
-  # The NixOS module stops Plex with SIGQUIT, sent to the whole control group. The unit's
-  # main process is not Plex but the bubblewrap sandbox it runs in, and SIGQUIT's default
-  # action there is a core dump: every stop (so every switch that restarts Plex) logged
-  # a crash with a backtrace and left the unit "failed with result core-dump". SIGTERM
-  # shuts Plex down just as cleanly and bubblewrap simply exits on it.
-  systemd.services.plex.serviceConfig.KillSignal = lib.mkForce "SIGTERM";
+  # A stop that Plex gets to finish. The NixOS module stops the unit with SIGQUIT sent to
+  # the whole control group, but Plex runs inside a bubblewrap sandbox that takes the same
+  # signal: bubblewrap has no handler, so it dies on the spot (dumping core, for SIGQUIT)
+  # and its --die-with-parent then SIGKILLs Plex about 90 ms into its own shutdown. Every
+  # stop -- so every switch that restarts Plex -- logged a crash with a backtrace, left the
+  # unit failed, and cut the server off mid-shutdown.
+  #
+  # So signal Plex alone, by its PID file, and wait for it; bubblewrap exits by itself
+  # once its child has. Plex treats INT, QUIT and TERM alike as an order to shut down.
+  # The wait is bounded by the unit's stop timeout, after which systemd takes over.
+  #
+  # The module's KillSignal=SIGQUIT stays as the sweep for whatever is left afterwards.
+  # Do not swap it for SIGTERM: Plex's plug-in hosts ignore SIGTERM, so the unit sat in
+  # its final-sigterm state for the full 90 s stop timeout, holding up the switch.
+  systemd.services.plex.serviceConfig.ExecStop = pkgs.writeShellScript "plex-stop" ''
+    pid=$(${pkgs.coreutils}/bin/cat "/var/lib/plex/Plex Media Server/plexmediaserver.pid") || exit 0
+    kill -TERM "$pid" 2>/dev/null || exit 0
+    ${pkgs.coreutils}/bin/tail --pid="$pid" -f /dev/null
+  '';
 
   systemd.tmpfiles.rules = [
     "d /srv 0755 root root - -"
