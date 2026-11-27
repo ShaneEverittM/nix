@@ -60,6 +60,11 @@ _: {
     # client and could hand a different address -- and the router's port forwards for
     # the game servers point at this host's address.
     dhcpV4Config.ClientIdentifier = "mac";
+    # The hostname is networking.hostName, not whatever the router offers. networkd
+    # would otherwise try to apply the DHCP-supplied name through hostnamed, which
+    # needs polkit, which this box does not run: a warning on every boot for a change
+    # that is not wanted anyway.
+    dhcpV4Config.UseHostname = false;
     linkConfig.RequiredForOnline = "routable";
   };
   # "Online" is ANY one port being routable. Every port asks for routable above, since

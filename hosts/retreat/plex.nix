@@ -56,6 +56,29 @@ in
   # back with it.
   hardware.graphics.enable = true;
 
+  # Plex sends its own WARN/ERROR lines to syslog at matching priorities, and most of
+  # them are chatter about clients and optional features rather than about the server:
+  # they were four fifths of this host's warning-and-up journal. The patterns below drop
+  # exactly the ones seen and understood here, so a line of any other shape still shows.
+  # Dropped means not journalled at all; Plex's own log files under /var/lib/plex keep
+  # everything.
+  systemd.services.plex.serviceConfig.LogFilterPatterns = [
+    # A client's notification websocket being torn down mid-frame, e.g. an app that is
+    # closed or a TV that goes to sleep.
+    "~WebSocket: (closing connection due to (fragmentation|large frame)|Ignoring message since we.re closing the connection|Received unmasked data, shutting down connection|Unexpected opcode )"
+    # A transcode job that had already finished when its client asked after it.
+    "~JobManager: Could not find job for handle "
+    "~FFMPEG. - deprecated pixel format used, make sure you did set range correctly"
+    # Clients asking for legacy metadata agents (TheTVDB, IMDb, ...) that current servers
+    # no longer ship.
+    "~Request for plug-in .com.plexapp.agents.[a-z]+. but it doesn.t exist"
+    "~Unknown metadata type: folder"
+    # Newer clients sending query fields this server version does not know.
+    "~QueryParser: Invalid field .* found, ignoring"
+    # Seek-bar preview thumbnails that were never generated for an item.
+    "~Error opening file .*/Indexes/index-sd.bif.* - No such file or directory"
+  ];
+
   systemd.tmpfiles.rules = [
     "d /srv 0755 root root - -"
     # `v` makes a subvolume on btrfs and only acts when the path doesn't exist yet.

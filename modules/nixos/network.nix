@@ -31,4 +31,8 @@ _:
   # on rebirth post-`tailscale up`: MagicDNS names resolved, nothing else did).
   # systemd-networkd on retreat hands its DHCP nameservers to resolved natively.
   services.resolved.enable = true;
+  # mDNS belongs to avahi (above). resolved ships with its own responder on by default,
+  # and two stacks on UDP 5353 is what avahi warns about at every start ("Detected
+  # another IPv4 mDNS stack ... makes mDNS unreliable").
+  services.resolved.settings.Resolve.MulticastDNS = false;
 }
