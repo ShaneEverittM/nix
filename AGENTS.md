@@ -166,6 +166,41 @@ Notes:
   by the flake must be `git add`-ed before Nix can see them.
 - Include `flake.lock` only when inputs were intentionally updated.
 
+## Stacked PRs
+
+Dependent changes go up as a stack: the bottom PR targets `main`, and each PR above it
+targets the head branch of the PR below. GitHub's native stacked pull requests (public
+preview as of November 2026, so re-read the
+[docs](https://docs.github.com/en/pull-requests/reference/stacked-pull-requests) before
+relying on a detail here) then let the whole stack land in one action.
+
+- **Form the stack.** Chain the bases (`gh pr edit <n> --base <parent-branch>`). On the
+  web, GitHub recognizes the chain and shows a banner offering to turn the PRs into a
+  stack. From the CLI, `gh stack link <bottom> ... <top>` does the same for existing
+  PRs, bottom first. `gh stack` is an extension that is not installed on retreat by
+  default: `gh extension install github/gh-stack`.
+- **Merge the stack.** Merging a PR in a stack lands it and every unmerged PR below it
+  together, bottom-up, so merging the top PR lands everything. A mid-stack PR cannot be
+  merged on its own. Use the merge-commit method, which gives one merge commit per PR:
+  on the web from the top PR's merge box, or `gh stack merge <top-pr> --merge`.
+  Requirements are evaluated against the stack's base (`main`) for every PR in it.
+- **Prefer landing the whole stack at once.** After a partial merge GitHub rebases the
+  remaining PRs onto the base by itself. The docs disagree on whether server-side
+  rebases are signed, and commits in this repo are SSH-signed, so avoid leaving a
+  remainder for GitHub to rewrite.
+- **Updating a stack uses merges here, not the stack tooling.** `gh stack sync` and
+  `gh stack rebase` rebase every branch and force-push; the docs describe no merge-based
+  alternative. This repo updates branches with merge commits, so bring a child up to
+  date by merging its parent into it (`git merge origin/<parent-branch>`) and pushing
+  normally. Do not run `gh stack sync` or `gh stack rebase`, or otherwise rebase or
+  force-push, unless asked.
+- **Unverified.** The docs require "a fully linear history between its branches" for a
+  stack to merge. Whether a child that was updated by merging its parent in satisfies
+  that has not been tested here. If the merge is refused for that reason, stop and ask
+  rather than rebasing.
+- Stacks need every branch in this repository (no forks). Merging is the user's call: do
+  not merge a PR or a stack unless explicitly asked.
+
 ## Flake input update PRs
 
 Any PR that changes `flake.lock` should include an `nvd` closure diff in the body,
