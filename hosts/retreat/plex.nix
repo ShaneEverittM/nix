@@ -19,6 +19,33 @@
 # then open http://localhost:32400/web, sign in, and add libraries pointing at
 # /srv/media/movies and /srv/media/tv. Nothing about the account lives in this flake.
 #
+# PLEX.TV. Two settings under Settings -> Network live in Plex's own state and matter:
+# "Preferred network interface" is the wired LAN port, and "Custom server access URLs"
+# holds this host's tailnet address in Plex's own plex.direct form,
+#   https://<tailnet IPv4 with dashes for dots>.<hash>.plex.direct:32400
+# where <hash> is the one in the certificate Plex serves on :32400 (its subject is
+# *.<hash>.plex.direct). Why both:
+#   - Left alone, Plex publishes every interface address to plex.tv in one request, and
+#     plex.tv's edge answers 403 to any request that names an address in Tailscale's
+#     100.64.0.0/10 -- so the whole update failed, hourly, and plex.tv knew no address
+#     for the server at all. A hostname in place of the raw address passes.
+#   - It has to be the plex.direct name, not the tailnet's own ts.net name: Plex's
+#     certificate only covers plex.direct, and the official apps refuse a connection
+#     whose certificate does not match, so with the ts.net name they could not reach
+#     the server from off the LAN even over Tailscale.
+# After a reprovision, set both again; a new server identity means a new <hash>.
+#
+# Two more, set while chasing the official apps' "remote playback needs a subscription"
+# prompt over Tailscale. "Enable Relay" is off, since nothing here uses Plex's relay.
+# And LanNetworksBandwidth="192.168.1.0/24,100.64.0.0/10" is in Preferences.xml (the
+# UI field for it, "LAN Networks", is not shown on this server; edit the file with Plex
+# stopped), which makes the server count tailnet clients as local. Neither removes the
+# prompt: the official apps decide "remote" themselves, before asking the server for a
+# stream. Third-party clients and the web app are not affected. Do not try to fix it by
+# advertising this host's LAN address as a Tailscale subnet route: Plex labels
+# connections that arrive that way as WAN, and the route pulls LAN machines that run
+# Tailscale onto the same path, so they turn "remote" too.
+#
 # MEDIA lives in /srv/media, its own subvolume, owned by the login user so files can be
 # copied in over SSH/rsync without sudo; Plex only reads it. It must not live under
 # /home: the unit runs with ProtectHome, and `home` is in the btrbk timeline. /srv/media
@@ -30,7 +57,7 @@
 # identity. Also not backed up off-box. Plex keeps its own rotating database backups
 # inside that directory, which cover a corrupt database but not a dead disk; losing it
 # means re-claiming the server and re-scanning, with watch state gone.
-_:
+{ pkgs, ... }:
 
 let
   identity = import ../../lib/identity.nix;
@@ -55,6 +82,54 @@ in
   # looks. Off by default on this box since the desktop went; no display stack comes
   # back with it.
   hardware.graphics.enable = true;
+
+  # Plex sends its own WARN/ERROR lines to syslog at matching priorities, and most of
+  # them are chatter about clients and optional features rather than about the server:
+  # they were four fifths of this host's warning-and-up journal. The patterns below drop
+  # exactly the ones seen and understood here, so a line of any other shape still shows.
+  # Dropped means not journalled at all; Plex's own log files under /var/lib/plex keep
+  # everything.
+  systemd.services.plex.serviceConfig.LogFilterPatterns = [
+    # A client's notification websocket being torn down mid-frame, e.g. an app that is
+    # closed or a TV that goes to sleep.
+    "~WebSocket: (closing connection due to (fragmentation|large frame)|Ignoring message since we.re closing the connection|Received unmasked data, shutting down connection|Unexpected opcode )"
+    # A transcode job that had already finished when its client asked after it.
+    "~JobManager: Could not find job for handle "
+    "~FFMPEG. - deprecated pixel format used, make sure you did set range correctly"
+    # Clients asking for legacy metadata agents (TheTVDB, IMDb, ...) that current servers
+    # no longer ship.
+    "~Request for plug-in .com.plexapp.agents.[a-z]+. but it doesn.t exist"
+    "~Unknown metadata type: folder"
+    # Newer clients sending query fields this server version does not know.
+    "~QueryParser: Invalid field .* found, ignoring"
+    # Seek-bar preview thumbnails that were never generated for an item.
+    "~Error opening file .*/Indexes/index-sd.bif.* - No such file or directory"
+    # Said once on every clean stop and start.
+    "~Error in (advertiser|browser) handle read: 125 .Operation canceled."
+    "~CERT/OCSP. getCertInfo failed; skipping stapling"
+    "~MyPlex: attempted a reachability check but we.re not yet mapped"
+    "~Unrecognized MediaProvider feature: "
+  ];
+
+  # A stop that Plex gets to finish. The NixOS module stops the unit with SIGQUIT sent to
+  # the whole control group, but Plex runs inside a bubblewrap sandbox that takes the same
+  # signal: bubblewrap has no handler, so it dies on the spot (dumping core, for SIGQUIT)
+  # and its --die-with-parent then SIGKILLs Plex about 90 ms into its own shutdown. Every
+  # stop -- so every switch that restarts Plex -- logged a crash with a backtrace, left the
+  # unit failed, and cut the server off mid-shutdown.
+  #
+  # So signal Plex alone, by its PID file, and wait for it; bubblewrap exits by itself
+  # once its child has. Plex treats INT, QUIT and TERM alike as an order to shut down.
+  # The wait is bounded by the unit's stop timeout, after which systemd takes over.
+  #
+  # The module's KillSignal=SIGQUIT stays as the sweep for whatever is left afterwards.
+  # Do not swap it for SIGTERM: Plex's plug-in hosts ignore SIGTERM, so the unit sat in
+  # its final-sigterm state for the full 90 s stop timeout, holding up the switch.
+  systemd.services.plex.serviceConfig.ExecStop = pkgs.writeShellScript "plex-stop" ''
+    pid=$(${pkgs.coreutils}/bin/cat "/var/lib/plex/Plex Media Server/plexmediaserver.pid") || exit 0
+    kill -TERM "$pid" 2>/dev/null || exit 0
+    ${pkgs.coreutils}/bin/tail --pid="$pid" -f /dev/null
+  '';
 
   systemd.tmpfiles.rules = [
     "d /srv 0755 root root - -"

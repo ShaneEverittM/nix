@@ -28,6 +28,19 @@ in
     openssh.authorizedKeys.keys = [ identity.sshPublicKey ];
   };
 
+  # dbus-broker on the user bus logs four "Ignoring duplicate name" lines at error level
+  # on every login and every switch. They are a NixOS packaging quirk, not a fault: the
+  # generated session.conf lists system-path's share/dbus-1/services as a service
+  # directory, and the same directory is reached again through XDG_DATA_DIRS, so
+  # systemd's own four activation files are each seen twice. The pattern names exactly
+  # those four, so a duplicate of anything else still shows.
+  #
+  # LogFilterPatterns= is not available in user units, but journald looks the filter up
+  # on the *system* unit a process lives under, and for the user bus that is user@.
+  systemd.services."user@".serviceConfig.LogFilterPatterns = [
+    "~Ignoring duplicate name .org.freedesktop.(systemd1|portable1|machine1|import1). in service file "
+  ];
+
   # Shared home layer: every host gets the git module and the personal identity;
   # hosts stack their own bundles (retreat: core + linux) and host-specific
   # publicHome.* values on top. Importing git.nix here dedupes against hosts that

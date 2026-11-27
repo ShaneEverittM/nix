@@ -108,52 +108,82 @@ in
     snapshot_name = "sure-backups";
   };
 
-  systemd.services = {
-    # First-start secret generation. Never rewrites an existing file: a new
-    # SECRET_KEY_BASE would make already-encrypted data unreadable.
-    sure-secrets = {
-      description = "Generate Sure's secrets on first start";
-      wantedBy = [ "multi-user.target" ];
-      path = [ pkgs.openssl ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        UMask = "0077";
-      };
-      script = ''
-        # tmpfiles normally has this in place already; do not depend on the ordering.
-        mkdir -p ${stateDir}/config
-        if [ ! -s ${envFile} ]; then
-          printf 'SECRET_KEY_BASE=%s\nPOSTGRES_PASSWORD=%s\n' \
-            "$(openssl rand -hex 64)" "$(openssl rand -hex 24)" > ${envFile}.tmp
-          mv ${envFile}.tmp ${envFile}
-        fi
-      '';
-    };
+  systemd.services = lib.mkMerge [
+    (
+      {
+        # First-start secret generation. Never rewrites an existing file: a new
+        # SECRET_KEY_BASE would make already-encrypted data unreadable.
+        sure-secrets = {
+          description = "Generate Sure's secrets on first start";
+          wantedBy = [ "multi-user.target" ];
+          path = [ pkgs.openssl ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            UMask = "0077";
+          };
+          script = ''
+            # tmpfiles normally has this in place already; do not depend on the ordering.
+            mkdir -p ${stateDir}/config
+            if [ ! -s ${envFile} ]; then
+              printf 'SECRET_KEY_BASE=%s\nPOSTGRES_PASSWORD=%s\n' \
+                "$(openssl rand -hex 64)" "$(openssl rand -hex 24)" > ${envFile}.tmp
+              mv ${envFile}.tmp ${envFile}
+            fi
+          '';
+        };
 
-    sure-network = {
-      description = "Create the podman network Sure's containers share";
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-      };
-      script = ''
-        ${podman} network exists ${network} || ${podman} network create ${network}
-      '';
-    };
-  }
-  # Every container needs the network and the secrets file in place first.
-  // lib.genAttrs (map (c: "podman-${c}") containers) (_: {
-    after = [
-      "sure-network.service"
-      "sure-secrets.service"
-    ];
-    requires = [
-      "sure-network.service"
-      "sure-secrets.service"
-    ];
-  });
+        sure-network = {
+          description = "Create the podman network Sure's containers share";
+          wantedBy = [ "multi-user.target" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script = ''
+            ${podman} network exists ${network} || ${podman} network create ${network}
+          '';
+        };
+      }
+      # Every container needs the network and the secrets file in place first.
+      // lib.genAttrs (map (c: "podman-${c}") containers) (_: {
+        after = [
+          "sure-network.service"
+          "sure-secrets.service"
+        ];
+        requires = [
+          "sure-network.service"
+          "sure-secrets.service"
+        ];
+      })
+    )
+    # Keep the journal's warning-and-up view to things worth reading. podman's journald
+    # log driver files a container's whole stderr at priority "err", and neither of these
+    # two can say anything on stdout instead, so their routine lines all arrive looking
+    # like errors. The deny patterns name those routine lines and nothing else: anything
+    # unlisted (a Postgres ERROR/FATAL, a LOG line about a crash or recovery, a failed
+    # backup) still lands at "err". A denied line is dropped by journald, not demoted,
+    # so it is absent from `journalctl -u` and `podman logs` as well.
+    {
+      # Postgres logs everything to stderr and has no per-severity destination. These
+      # are its start-up, shutdown and checkpoint lines, all at its "LOG" level.
+      podman-sure-db.serviceConfig.LogFilterPatterns = [
+        "~ LOG: +checkpoint (starting|complete):"
+        "~ LOG: +starting PostgreSQL "
+        "~ LOG: +listening on (IPv4|IPv6|Unix) "
+        "~ LOG: +database system (was shut down at|is ready to accept connections|is shut down)"
+        "~ LOG: +received (smart|fast) shutdown request"
+        "~ LOG: +aborting any active transactions"
+        "~ LOG: +shutting down"
+        "~ LOG: +background worker .logical replication launcher. .* exited with exit code 1"
+      ];
+      # Upstream's backup tool wants to bundle a docker-compose file. There is none
+      # here by design (this module is the compose file), so it says so every night.
+      podman-sure-backup.serviceConfig.LogFilterPatterns = [
+        "~WARNING: no compose file in /config; it is NOT included"
+      ];
+    }
+  ];
 
   virtualisation.oci-containers.containers = {
     sure-db = {
